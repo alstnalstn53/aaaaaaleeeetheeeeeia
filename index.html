@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aletheia</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="cursor-dot"></div>
+<div class="cursor-ring"></div>
+<nav>
+  <div class="logo" id="logoBtn"><svg viewBox="0 0 24 24"><path d="M 5 19 A 10 10 0 1 1 19 19" fill="none" stroke-linecap="round"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/></svg>Aletheia</div>
+  <ul class="nav-center">
+    <li data-page="about" class="active">ABOUT</li>
+    <li data-page="unmask">UNMASK</li>
+    <li data-page="interpret">INTERPRET</li>
+    <li data-page="archive">ARCHIVE</li>
+  </ul>
+  <div class="nav-auth">
+    <div class="lang-sel" id="langSel">
+      <button class="lang-btn" id="langBtn"><span id="langCurrent">KO</span><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <div class="lang-dropdown" id="langDropdown">
+        <button class="lang-opt active" data-lang="ko">한국어</button>
+        <button class="lang-opt" data-lang="en">English</button>
+        <button class="lang-opt" data-lang="es">Español</button>
+      </div>
+    </div>
+    <button class="btn-theme" id="btnTheme" title="테마 변경">
+      <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+    <button class="btn-signin" id="btnSignIn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></svg><span data-i18n="signIn">Sign in</span></button>
+    <div class="nav-profile" id="navProfile">
+      <div class="nav-profile-btn" id="navProfileBtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></svg><span class="nav-name" id="navName">User</span></div>
+      <div class="profile-dropdown" id="profileDropdown">
+        <button class="pd-item" id="btnMyPage" data-i18n="myPage">My Page</button>
+        <button class="pd-item" id="btnSignOut" data-i18n="signOut">Sign out</button>
+      </div>
+    </div>
+  </div>
+  <button class="nav-hamburger" id="navHamburger"><span></span><span></span><span></span></button>
+</nav>
+<!-- Mobile Menu -->
+<div class="nav-mobile-menu" id="navMobileMenu">
+  <li data-page="about">ABOUT</li>
+  <li data-page="unmask">UNMASK</li>
+  <li data-page="interpret">INTERPRET</li>
+  <li data-page="archive">ARCHIVE</li>
+  <li id="mobileSignIn">SIGN IN</li>
+</div>
+<div id="canvas-container"></div>
+<!-- ABOUT -->
+<div class="page active" id="page-about">
+  <div class="hero-top">
+    <div class="hero-landing">
+      <div class="hl-logo" id="hlLogo">Aletheia</div>
+      <div class="hl-bottom">
+        <div class="hl-typing" id="hlTyping"></div>
+        <div class="hl-buttons" id="hlButtons">
+          <button class="hl-btn" onclick="goPage('unmask')">UNMASK</button>
+          <button class="hl-btn" onclick="goPage('interpret')">INTERPRET</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="container">
+    <section id="sec-philosophy"><span class="label typing-target" data-text="Our Core"></span><div class="phi-text reveal reveal-d1">"당신의 이야기에서 본질을 추출하고, 그것을 물성으로 치환합니다."</div><div class="phi-desc reveal reveal-d2">우리는 외부에서 유행하는 아이템을 가져오는 것이 아니라, 당신 내면의 원초적인 경험과 성질을 추출하여 세상에 단 하나뿐인 비즈니스의 물성으로 치환합니다. 대화할수록 데이터가 쌓이고, 그 데이터가 당신의 본질이 됩니다.</div></section>
+
+    <!-- ===== DEMO SECTIONS ===== -->
+    <section id="sec-demo1" class="demo-section">
+      <div class="demo-layout">
+        <div class="demo-text reveal">
+          <span class="demo-num">/STEP 01</span>
+          <h2 class="demo-title">당신은 자신을 얼마나 알고 있나요?</h2>
+          <p class="demo-desc">Aletheia는 답을 주지 않습니다.<br>대화를 통해 당신 안에 이미 있지만 아직 드러나지 않은 것들을 발견합니다.</p>
+          <p class="demo-sub">가치관, 반복 패턴, 회피 성향, 잠재 동기, 감정의 온도.</p>
+        </div>
+        <div class="demo-visual reveal reveal-d2">
+          <div class="demo-chat-mock">
+            <div class="dcm-header"><span class="dcm-dot"></span><span class="dcm-title">Aletheia Core</span></div>
+            <div class="dcm-messages" id="demo-chat-1">
+              <div class="dcm-msg dcm-ai"><span class="dcm-label">ALETHEIA</span><div class="dcm-bubble" data-demo="요즘 어떤 생각에 빠져 있어요?"></div></div>
+              <div class="dcm-msg dcm-user"><span class="dcm-label">YOU</span><div class="dcm-bubble" data-demo="카페를 열고 싶은데... 뭔가 확신이 없어요."></div></div>
+              <div class="dcm-msg dcm-ai"><span class="dcm-label">ALETHEIA</span><div class="dcm-bubble" data-demo="카페라는 형태를 걷어내면, 진짜 하고 싶은 건 뭘까요?"></div></div>
+              <div class="dcm-msg dcm-user"><span class="dcm-label">YOU</span><div class="dcm-bubble" data-demo="...공간? 내 이야기가 담긴 공간을 만들고 싶은 것 같아요."></div></div>
+              <div class="dcm-msg dcm-ai"><span class="dcm-label">ALETHEIA</span><div class="dcm-bubble" data-demo="'공간'이라는 단어를 두 번 썼어요. 거기에 뭔가 있는 것 같아요."></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-demo2" class="demo-section">
+      <div class="demo-layout demo-layout-reverse">
+        <div class="demo-visual reveal">
+          <div class="demo-profile-mock">
+            <div class="dpm-header"><span class="dpm-title">Essence Snapshot</span><span class="dpm-ver">v1.0</span></div>
+            <div class="dpm-body">
+              <div class="dpm-tag-area" id="demo-tags">
+                <span class="dpm-tag" data-delay="0">공간감각</span>
+                <span class="dpm-tag" data-delay="200">독립지향</span>
+                <span class="dpm-tag" data-delay="400">경험기반</span>
+                <span class="dpm-tag" data-delay="600">자기탐색</span>
+                <span class="dpm-tag" data-delay="800">본질추구</span>
+              </div>
+              <div class="dpm-section">
+                <span class="dpm-label">핵심 가치</span>
+                <p class="dpm-value" id="demo-value">표면을 뚫고 구조를 보려는 사람</p>
+              </div>
+              <div class="dpm-section">
+                <span class="dpm-label">에너지 지도</span>
+                <div class="dpm-energy">
+                  <span class="dpm-energy-high">↑ 자기 철학을 만들 때</span>
+                  <span class="dpm-energy-low">↓ 남의 기준에 맞출 때</span>
+                </div>
+              </div>
+              <div class="dpm-section">
+                <span class="dpm-label">서사</span>
+                <p class="dpm-narrative" id="demo-narrative">가짜를 참지 못하는 사람이 진짜를 찾아 헤매다, 자기만의 도구를 만들기 시작했다.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="demo-text reveal reveal-d2">
+          <span class="demo-num">/STEP 02</span>
+          <h2 class="demo-title">AI가 답을 주지 않습니다.<br>거울이 됩니다.</h2>
+          <p class="demo-desc">대화가 쌓일수록 당신의 프로필이 형성됩니다. 태그가 아니라 서사로. 진단이 아니라 발견으로.</p>
+          <p class="demo-sub">Essence Document는 확정이 아니라 현재 버전의 스냅샷입니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-demo3" class="demo-section">
+      <div class="demo-layout">
+        <div class="demo-text reveal">
+          <span class="demo-num">/STEP 03</span>
+          <h2 class="demo-title">자기를 아는 사람은<br>AI를 도구로 쓴다.</h2>
+          <p class="demo-desc">자기를 모르는 사람은 AI의 도구가 된다.<br><br>Aletheia는 AI 과의존을 만들지 않습니다.<br>AI 없이도 자기 기준이 있는 사람을 만드는 것이 목표입니다.</p>
+          <p class="demo-sub">알고리즘이 추천하는 '나'가 아니라, 진짜 '나'를 기준으로.</p>
+        </div>
+        <div class="demo-visual reveal reveal-d2">
+          <div class="demo-essence-flow">
+            <div class="def-step def-step-1"><span class="def-icon">💬</span><span class="def-label">대화</span></div>
+            <div class="def-arrow">→</div>
+            <div class="def-step def-step-2"><span class="def-icon">🔍</span><span class="def-label">추출</span></div>
+            <div class="def-arrow">→</div>
+            <div class="def-step def-step-3"><span class="def-icon">📄</span><span class="def-label">Essence</span></div>
+            <div class="def-arrow">→</div>
+            <div class="def-step def-step-4"><span class="def-icon">🧭</span><span class="def-label">나침반</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- ===== END DEMO SECTIONS ===== -->
+    <section id="sec-method"><span class="label typing-target" data-text="The Method"></span><div class="method-list">
+      <div class="method-row reveal reveal-d1"><div class="method-left"><span class="m-num">/0.1</span><p class="m-desc"><strong>Unmask</strong><br>대화를 통해 당신의 패턴, 가치관, 잠재 동기를 추출하고<br>하나의 프로필로 합성합니다.</p><button class="m-btn" onclick="goPage('unmask')">Start Unmask →</button></div><div class="method-right"><div class="big-typo">UNMASK</div></div></div>
+      <div class="method-row reveal reveal-d2"><div class="method-left"><span class="m-num">/0.2</span><p class="m-desc"><strong>Interpret</strong><br>산업의 본질과 당신의 본질이 만나는 교차점을 찾습니다.</p><button class="m-btn" onclick="goPage('interpret')">Start Interpret →</button></div><div class="method-right"><div class="big-typo">INTERPRET</div></div></div>
+    </div></section>
+    <footer><div>© 2026 Aletheia</div><div>Less but Better</div></footer>
+  </div>
+</div>
+<!-- CORE -->
+<div class="page" id="page-unmask">
+  <div class="svc-page">
+    <div class="svc-intro"><div class="svc-intro-num svc-anim" data-delay="0">/0.1</div><h2 class="svc-intro-title svc-anim" data-delay="100">당신을 발견하세요.</h2><p class="svc-intro-desc svc-anim" data-delay="200">대화를 시작하면 당신의 윤곽이 드러납니다.<br>가치관, 패턴, 회피하는 것 — 모든 것이 여기에 쌓입니다.</p></div>
+  </div>
+  <!-- v4-style chatbox -->
+  <div class="chatbox-wrap" id="coreWrap">
+    <div class="chatbox" id="coreBox">
+      <div class="cb-body">
+        <div class="cb-header">
+          <div class="cb-header-left">
+            <div class="cb-header-logo"><svg viewBox="0 0 24 24"><path d="M 5 19 A 10 10 0 1 1 19 19" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/></svg></div>
+            <span class="cb-header-name" id="cbHeaderName">Aletheia Core</span>
+          </div>
+          <div class="cb-header-right">
+            <button class="cb-icon-btn" id="cbNewChat" title="새 대화"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            <button class="cb-icon-btn" id="cbBookmarkList" title="북마크"><svg viewBox="0 0 24 24"><path d="M6 4h12a1 1 0 0 1 1 1v16l-7-4-7 4V5a1 1 0 0 1 1-1z"/></svg></button>
+            <button class="cb-icon-btn" id="cbGalleryBtn" title="갤러리"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></button>
+            <button class="cb-icon-btn" id="cbProfileBtn" title="Unmask"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg><span class="unmask-badge" id="umBadge">0</span></button>
+            <button class="cb-icon-btn" id="cbHistoryBtn" title="이전 대화"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+            <button class="cb-close" id="cbClose"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+          </div>
+        </div>
+        <!-- History Panel -->
+        <div class="cb-overlay-panel" id="cbHistoryPanel">
+          <div class="cbp-title">이전 대화</div>
+          <div class="cbp-list" id="cbHistoryList"></div>
+        </div>
+        <!-- Bookmark Panel -->
+        <div class="cb-overlay-panel" id="cbBookmarkPanel">
+          <div class="cbp-title">저장된 메시지</div>
+          <div class="cbp-list" id="cbBookmarkListContent"></div>
+        </div>
+        <!-- Gallery Panel -->
+        <div class="cb-overlay-panel" id="cbGalleryPanel">
+          <div class="cbp-title">갤러리</div>
+          <div class="cbp-gallery" id="cbGalleryGrid"></div>
+        </div>
+        <!-- Profile Panel -->
+        <div class="cb-overlay-panel" id="cbProfilePanel">
+          <div class="cbp-title">UNMASK</div>
+          <div class="cbp-profile-sub">대화할수록 당신의 윤곽이 드러납니다.</div>
+          <div class="um-status" id="umStatus"><span class="um-status-dot" id="umStatusDot2"></span><span id="umStatusText2">대기 중</span></div>
+          <div class="um-depth-wrap">
+            <div class="um-depth-label"><span class="um-depth-title">대화 깊이</span><span class="um-depth-count" id="umDepthCount">0회</span></div>
+            <div class="um-depth-bar"><div class="um-depth-fill" id="umDepthFill"></div></div>
+          </div>
+          <div class="cbp-tags" id="cbProfileTags"></div>
+          <div class="cbp-section locked" id="umSecValues">
+            <div class="cbp-section-title">핵심 가치관</div>
+            <div class="cbp-section-value" id="profileValues">대화가 더 필요합니다...</div>
+          </div>
+          <div class="cbp-section locked" id="umSecAvoid">
+            <div class="cbp-section-title">회피 패턴</div>
+            <div class="cbp-section-value" id="profileAvoid">대화가 더 필요합니다...</div>
+          </div>
+          <div class="cbp-section locked" id="umSecMotiv">
+            <div class="cbp-section-title">잠재 동기</div>
+            <div class="cbp-section-value" id="profileMotiv">대화가 더 필요합니다...</div>
+          </div>
+        <!-- Essence Prompts (blur paywall) -->
+        <div class="essence-prompts" id="essencePrompts" style="display:none">
+          <div class="ep-header">
+            <span class="ep-title"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>AI PROMPTS</span>
+            <span class="ep-badge">GENERATED</span>
+          </div>
+          <div class="ep-list" id="epList">
+            <div class="ep-item preview">나는 표면보다 구조를 보는 사람입니다. 깊이 있는 질문으로 대화해주세요.</div>
+            <div class="ep-item locked">추상적 조언보다 구체적 사례와 경험으로 설명해주세요.</div>
+            <div class="ep-item locked">완벽보다 진짜를 추구합니다. 솔직하게 대화해주세요.</div>
+            <div class="ep-item locked">권위보다 논리로 설득해주세요. "왜?"를 끝까지 파고드는 성향입니다.</div>
+          </div>
+          <button class="ep-unlock" id="epUnlock">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            전체 프롬프트 보기 — 구독 또는 크레딧
+          </button>
+        </div>
+        </div>
+        <div class="cb-msgs" id="cbMsgs">
+          <div class="cb-welcome" id="cbWelcome"><div class="cb-welcome-t">무엇이 당신을 이끄나요?</div><div class="cb-welcome-s">당신의 이야기에서 본질을 추출합니다.</div><div class="cb-chips"><span class="cb-chip" data-q="나는 카페를 하고 싶어">카페 창업</span><span class="cb-chip" data-q="내가 진짜 좋아하는게 뭔지 모르겠어">자기 탐구</span><span class="cb-chip" data-q="브랜드를 만들고 싶은데 방향을 모르겠어">브랜드 방향</span></div></div>
+        </div>
+        <div class="cb-input">
+          <div class="cb-model-row"><div class="cb-model" id="cbModel"><span class="dot" style="background:#000"></span><span class="model-name">Core</span><svg class="arr" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div></div>
+          <div class="cb-input-row"><button class="cb-attach" id="cbAttach" title="파일 첨부"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button><textarea class="cb-ta" id="cbTa" placeholder="대화를 시작하세요..." rows="1"></textarea><button class="cb-send" id="cbSend"><svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></button></div>
+        </div>
+      </div>
+      <div class="cb-bar" id="cbBar"><span class="cb-ph"><span class="cb-caret"></span>대화를 시작하세요...</span></div>
+    </div>
+  <!-- UNMASK ANALYSIS PANEL -->
+  <div class="unmask-panel" id="unmaskPanel" style="display:none">
+    <div class="um-header">
+      <span class="um-header-title">Unmask</span>
+      <span class="um-header-status"><span class="um-status-dot" id="umStatusDot"></span><span id="umStatusText">대기</span></span>
+    </div>
+    <div class="um-body" id="umBody">
+      <div class="um-empty" id="umEmpty">
+        <div class="um-empty-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg></div>
+        <div class="um-empty-text">대화를 시작하면<br>당신의 본질이 여기에 쌓입니다.</div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- INTERPRET -->
+<div class="page" id="page-interpret">
+  <div class="svc-page"><div class="svc-intro"><div class="svc-intro-num svc-anim" data-delay="0">/0.3</div><h2 class="svc-intro-title svc-anim" data-delay="100">산업의 본질을<br>교차시킵니다.</h2><p class="svc-intro-desc svc-anim" data-delay="200">진입하려는 분야를 입력하세요.<br>그 분야가 진짜로 팔고 있는 것과 당신의 본질이 만나는 지점.</p><div class="interpret-input-wrap svc-anim" data-delay="300"><input class="interpret-input" id="interpretInput" placeholder="예: 스페셜티 커피"/><button class="interpret-go" id="interpretGo">해석 시작</button></div></div>
+  <div class="interpret-result" id="interpretResult" style="display:none">
+    <div class="ir-header"><span class="ir-field" id="irField"></span><span class="ir-badge">INTERPRET ANALYSIS</span></div>
+    <div class="ir-grid">
+      <div class="ir-card"><div class="ir-card-title">표면적 가치</div><div class="ir-card-body" id="irSurface"></div></div>
+      <div class="ir-card"><div class="ir-card-title">본질적 가치</div><div class="ir-card-body" id="irEssence"></div></div>
+      <div class="ir-card"><div class="ir-card-title">숨겨진 욕구</div><div class="ir-card-body" id="irDesire"></div></div>
+      <div class="ir-card"><div class="ir-card-title">교차점</div><div class="ir-card-body" id="irCross"></div></div>
+    </div>
+    <div class="ir-insight"><div class="ir-card-title">핵심 인사이트</div><div class="ir-card-body" id="irInsight"></div></div>
+  </div>
+  </div>
+</div>
+
+<!-- ARCHIVE -->
+<div class="page" id="page-archive">
+  <div class="archive-map">
+    <div class="archive-map-header">
+      <h1 class="archive-map-title">실증의 기록.</h1>
+      <p class="archive-map-sub">Aletheia가 해석한 다양한 분야의 본질 아카이브.</p>
+    </div>
+    <div class="archive-map-canvas" id="archiveMapCanvas">
+      <svg class="map-lines" id="mapLines"></svg>
+      <div class="map-node" style="left:18%;top:32%" data-node="0">
+        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
+        <div class="map-label"><div class="map-label-cat">Cafe & Bakery</div><div class="map-label-name">GYEOL</div></div>
+      </div>
+      <div class="map-node" style="left:45%;top:22%" data-node="1">
+        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
+        <div class="map-label"><div class="map-label-cat">Space Design</div><div class="map-label-name">RAW CONCRETE</div></div>
+      </div>
+      <div class="map-node" style="left:75%;top:28%" data-node="2">
+        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
+        <div class="map-label"><div class="map-label-cat">Fashion</div><div class="map-label-name">STRUCTURE 01</div></div>
+      </div>
+      <div class="map-node" style="left:28%;top:62%" data-node="3">
+        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
+        <div class="map-label"><div class="map-label-cat">Fragrance</div><div class="map-label-name">DEEP SOIL</div></div>
+      </div>
+      <div class="map-node" style="left:55%;top:55%" data-node="4">
+        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
+        <div class="map-label"><div class="map-label-cat">Exhibition</div><div class="map-label-name">THE VOID</div></div>
+      </div>
+      <div class="map-node" style="left:80%;top:65%" data-node="5">
+        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
+        <div class="map-label"><div class="map-label-cat">Architecture</div><div class="map-label-name">MONOLITH</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROJECT DETAIL OVERLAY -->
+<div class="project-detail" id="projectDetail">
+  <div class="project-detail-bg"></div>
+  <button class="project-detail-close" id="pdClose"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <div class="project-detail-inner" id="pdInner"></div>
+</div>
+
+<!-- MY PAGE -->
+<div class="page" id="page-mypage">
+  <div class="mypage-inner"><h1 class="mypage-title">나의 여정.</h1><div class="mypage-grid"><div class="mypage-card"><div class="mc-label">PROFILE</div><div class="mc-value" id="mpName">—</div><div class="mc-sub" id="mpEmail">—</div></div><div class="mypage-card"><div class="mc-label">SUBSCRIPTION</div><span class="sub-badge" id="mpBadge">FREE</span><button class="btn-upgrade" id="btnUpgrade">구독 시작하기</button></div></div></div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="loginOverlay"><div class="login-modal"><div class="login-logo"><svg viewBox="0 0 24 24"><path d="M 5 19 A 10 10 0 1 1 19 19" fill="none" stroke-linecap="round"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/></svg></div><div class="login-title">Aletheia에 오신 것을 환영합니다</div><div class="login-sub">본질을 탐구하는 여정을 시작하세요.</div><button class="btn-google" id="btnGoogle"><svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Google로 계속하기</button><div class="login-terms">로그인 시 <a href="#">이용약관</a> 및 <a href="#">개인정보처리방침</a>에 동의합니다.</div></div></div>
+<div class="modal-overlay" id="pricingOverlay"><div class="pricing-modal"><button class="modal-close" id="pricingClose"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button><div class="pricing-title">당신의 본질에 투자하세요.</div><div class="pricing-sub">Aletheia의 서비스를 선택하세요.</div><div class="pricing-grid"><div class="price-card"><div class="pc-name">Explorer</div><div class="pc-price">₩0 <span>/ 영구</span></div><div class="pc-desc">Aletheia의 철학을 경험하세요.</div><ul class="pc-features"><li data-i18n="priceFeat1">Unmask 기본 대화 (일 10세션)</li><li>Unmask 실시간 프로필</li><li>Archive 열람</li></ul><button class="btn-price secondary" disabled>현재 플랜</button></div><div class="price-card featured"><div class="pc-name">Seeker</div><div class="pc-price">₩29,000 <span>/ 월</span></div><div class="pc-desc">본질을 깊이 탐구하는 풀 서비스.</div><ul class="pc-features"><li>Unmask 무제한 대화</li><li>Unmask 심층 분석</li><li>Interpret 분야 해석</li><li>채팅 기록 저장·열람</li><li>Deep / Interpret 모델 해금</li></ul><button class="btn-price primary" id="btnCheckout">구독 시작 →</button></div></div></div></div>
+<div id="modelMenu"><div class="mm-opt" data-model="Core" data-color="#000" data-tier="free"><span class="md" style="background:#000"></span>Aletheia Core</div><div class="mm-opt" data-model="Deep" data-color="#444" data-tier="seeker"><span class="md" style="background:#444"></span>Aletheia Deep<span class="mm-lock">PRO</span></div><div class="mm-opt" data-model="Interpret" data-color="#666" data-tier="seeker"><span class="md" style="background:#666"></span>Interpret v1<span class="mm-lock">PRO</span></div></div>
+
+
+<script src="/js/app.js"></script>
+<script src="/js/motion.js"></script>
+</body>
+</html>

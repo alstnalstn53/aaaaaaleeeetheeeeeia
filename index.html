@@ -1,0 +1,2440 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aletheia</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<style>
+:root{--bg:#fff;--text:#111;--sub:#555;--line:#e0e0e0;--nav-bg:rgba(255,255,255,0.1);--font-main:"Helvetica Neue","Arial",sans-serif;--font-mono:"Courier New",Courier,monospace;--cursor-color:#000;--cursor-border:rgba(0,0,0,0.1);--cursor-ring-bg:rgba(255,255,255,0.05)}
+body.dark-mode{--bg:#0a0a0a;--text:#e8e8e8;--sub:#999;--line:#222;--nav-bg:rgba(20,20,20,0.6);--cursor-color:#fff;--cursor-border:rgba(255,255,255,0.15);--cursor-ring-bg:rgba(255,255,255,0.03)}
+*{margin:0;padding:0;box-sizing:border-box;cursor:none!important}
+body{background:var(--bg);color:var(--text);font-family:var(--font-main);line-height:1.5;overflow-x:hidden;transition:background 0.6s ease,color 0.4s ease}
+body::after{content:"";position:fixed;top:0;left:0;width:100%;height:100%;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");pointer-events:none;z-index:9000;opacity:0.05}
+.cursor-dot{width:4px;height:4px;background:var(--cursor-color);border-radius:50%;position:fixed;pointer-events:none;z-index:999999;transition:transform 0.1s,background 0.4s}
+.cursor-ring{width:34px;height:34px;border:1px solid var(--cursor-border);border-radius:50%;position:fixed;pointer-events:none;z-index:999999;transition:transform 0.2s ease-out,border-color 0.4s,background 0.4s;transform:translate(-50%,-50%);backdrop-filter:blur(3px);background:var(--cursor-ring-bg)}
+body.hovered .cursor-ring{transform:translate(-50%,-50%) scale(1.2);background:rgba(255,255,255,0.1);border-color:rgba(0,0,0,0.2);backdrop-filter:blur(0)}
+body.dark-mode.hovered .cursor-ring{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.3)}
+body.clicking .cursor-ring{transform:translate(-50%,-50%) scale(0.7);transition:transform 0.08s}
+body.clicking .cursor-dot{transform:scale(1.4);transition:transform 0.08s}
+.container{max-width:1520px;margin:0 auto;padding:0 40px}
+nav{position:fixed;top:20px;left:50%;transform:translateX(-50%);width:98%;max-width:1580px;height:75px;display:flex;justify-content:space-between;align-items:center;padding:0 40px;z-index:7000;background:var(--nav-bg);border:1px solid rgba(255,255,255,0.15);border-radius:6px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 10px 30px rgba(0,0,0,0.02)}
+.logo{font-size:19px;font-weight:300;letter-spacing:-0.01em;cursor:pointer;display:flex;align-items:center;gap:10px;color:#000}
+.logo svg{width:26px;height:26px;fill:none;stroke:#000;stroke-width:1.5}
+.nav-center{display:flex;gap:32px;list-style:none;position:absolute;left:50%;transform:translateX(-50%);font-size:12px;font-weight:400;letter-spacing:0.05em}
+.nav-center li{color:#999;transition:0.2s;cursor:pointer;position:relative;padding:6px 0}
+.nav-center li:hover{color:#000}
+.nav-center li:active{transform:scale(0.94);transition:0.06s}
+.nav-center li.active{color:#000;font-weight:600}
+.nav-center li.active::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:1.5px;background:#000}
+.nav-auth{display:flex;align-items:center;gap:12px}
+.btn-signin{display:flex;align-items:center;gap:7px;padding:0 16px;height:34px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;background:transparent;font-size:12px;font-weight:400;color:#333;cursor:pointer;transition:0.2s;font-family:inherit;box-sizing:border-box}
+.btn-signin:hover{border-color:rgba(0,0,0,0.25);background:rgba(0,0,0,0.02)}
+.btn-signin svg{width:14px;height:14px}
+.nav-profile{display:none;align-items:center;cursor:pointer;position:relative}
+.nav-profile.show{display:flex}
+.nav-profile-btn{display:flex;align-items:center;gap:7px;padding:0 16px;height:34px;border:1px solid rgba(0,0,0,0.1);border-radius:8px;background:transparent;font-size:12px;font-weight:400;color:#333;cursor:pointer;transition:0.2s;font-family:inherit;box-sizing:border-box}
+.nav-profile-btn:hover{border-color:rgba(0,0,0,0.25);background:rgba(0,0,0,0.02)}
+.nav-profile-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5}
+.nav-name{font-size:13px;font-weight:400}
+.profile-dropdown{display:none;position:absolute;top:50px;right:0;background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:6px;min-width:160px;box-shadow:0 8px 30px rgba(0,0,0,0.12);z-index:9999}
+.profile-dropdown.show{display:block}
+.pd-item{display:block;width:100%;padding:9px 14px;font-size:12px;color:#333;border:none;background:none;text-align:left;cursor:pointer;border-radius:6px;transition:0.15s;font-family:inherit}
+.pd-item:hover{background:rgba(0,0,0,0.04)}
+.page{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;visibility:hidden;transition:opacity 1.2s ease;overflow:hidden;background:transparent}
+.page.active{opacity:1;visibility:visible;z-index:2}
+#page-about{overflow-y:auto;background:transparent}
+#canvas-container{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+
+/* ABOUT */
+#page-about .container{background:transparent}
+#page-about section{padding:180px 0;border-bottom:1px solid rgba(0,0,0,0.04);position:relative}
+.reveal{opacity:0;filter:blur(15px);transform:translateY(30px);transition:all 1.8s cubic-bezier(0.19,1,0.22,1)}
+.reveal.active{opacity:1;filter:blur(0);transform:translateY(0)}
+.reveal-d1{transition-delay:0.3s}
+.reveal-d2{transition-delay:0.6s}
+.reveal-d3{transition-delay:0.9s}
+.typing-target{opacity:0}.typing-active{opacity:1}
+.hero-top{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;z-index:1;gap:20px}
+.hero-landing{display:contents}
+.hl-logo{font-size:clamp(18px,2.2vw,26px);font-weight:500;letter-spacing:0.04em;color:#000;opacity:0;transform:translateY(-10px);filter:blur(6px);transition:opacity 4s cubic-bezier(0.19,1,0.22,1),transform 4s cubic-bezier(0.19,1,0.22,1),filter 4s cubic-bezier(0.19,1,0.22,1);line-height:1.4;text-align:center;text-shadow:0 0 30px rgba(255,255,255,0.9)}
+.hl-logo.visible{opacity:1;transform:translateY(0);filter:blur(0)}
+.hl-bottom{display:flex;flex-direction:column;align-items:center}
+.hl-typing{font-size:clamp(28px,3.5vw,52px);font-weight:400;color:#222;letter-spacing:0.01em;min-height:1.4em;text-align:center;line-height:1.3;text-shadow:0 0 40px rgba(255,255,255,0.9)}
+.hl-typing .cursor{display:inline-block;width:2px;height:1em;background:#000;margin-left:2px;animation:blink 0.6s infinite;vertical-align:text-bottom}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.hl-buttons{display:flex;gap:12px;margin-top:24px;opacity:0;transform:translateY(10px);filter:blur(6px);transition:opacity 4s cubic-bezier(0.19,1,0.22,1),transform 4s cubic-bezier(0.19,1,0.22,1),filter 4s cubic-bezier(0.19,1,0.22,1)}
+.hl-buttons.visible{opacity:1;transform:translateY(0);filter:blur(0)}
+.hl-btn{padding:12px 28px;border:1px solid rgba(0,0,0,0.1);border-radius:30px;background:rgba(255,255,255,0.2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);font-size:11px;font-weight:600;letter-spacing:0.12em;color:#111;cursor:pointer;transition:all 0.3s;font-family:inherit}
+.hl-btn:hover{background:rgba(0,0,0,0.06);border-color:rgba(0,0,0,0.25);transform:translateY(-2px)}
+.hl-btn:active{transform:translateY(0) scale(0.96);transition:all 0.08s}
+.label{font-size:42px;font-weight:500;letter-spacing:-0.02em;color:#000;margin-bottom:80px;display:block;font-family:var(--font-main);min-height:1.2em;text-shadow:0 0 30px rgba(255,255,255,0.8)}
+.phi-text{font-size:28px;font-weight:300;line-height:1.5;max-width:900px;margin-bottom:40px;color:#222;text-shadow:0 0 20px rgba(255,255,255,0.6)}
+.phi-desc{font-size:16px;color:var(--sub);line-height:1.7;max-width:750px;font-weight:300;text-shadow:0 0 20px rgba(255,255,255,0.6)}
+.method-list{display:flex;flex-direction:column;width:100%}
+.method-row{display:flex;justify-content:space-between;align-items:flex-start;padding:80px 0;border-bottom:1px solid rgba(0,0,0,0.04);position:relative;transition:0.3s}
+.method-row:last-child{border-bottom:none}
+.method-left{width:30%;display:flex;flex-direction:column;padding-top:10px}
+.m-num{font-size:12px;font-weight:600;color:#999;margin-bottom:20px;letter-spacing:0.05em}
+.m-desc{font-size:15px;line-height:1.6;color:#444;margin-bottom:30px;font-weight:300;word-break:keep-all}
+.m-btn{padding:10px 24px;font-size:12px;font-weight:600;border:1px solid #ccc;background:transparent;color:#000;border-radius:50px;width:fit-content;cursor:pointer;transition:all 0.3s ease;font-family:inherit}
+.m-btn:hover{border-color:#000;background:#000;color:#fff;transform:translateY(-2px)}
+.m-btn:active{transform:translateY(0) scale(0.95);transition:all 0.08s}
+.method-right{width:65%;text-align:right;user-select:none}
+.big-typo{display:flex;justify-content:flex-end;gap:5px;font-size:clamp(50px,8vw,120px);font-weight:300;line-height:0.9;color:#000;letter-spacing:-0.02em;cursor:default;text-shadow:0 0 40px rgba(255,255,255,0.9);filter:blur(6px);opacity:0.4;transition:filter 0.6s,opacity 0.6s}
+.method-row:hover .big-typo{filter:blur(0);opacity:1}
+.char{display:inline-block;transition:transform 0.4s cubic-bezier(0.175,0.885,0.32,1.275);will-change:transform}
+footer{padding:60px 0;font-size:12px;color:var(--sub);display:flex;justify-content:space-between;border-top:1px solid var(--line);margin-top:100px}
+
+/* SERVICE PAGES */
+
+/* ===== DEMO SECTIONS ===== */
+.demo-section{padding:140px 0!important}
+.demo-layout{display:flex;gap:60px;align-items:center;max-width:1200px;margin:0 auto;padding:0 40px}
+.demo-layout-reverse{flex-direction:row-reverse}
+.demo-text{flex:1;min-width:0}
+.demo-visual{flex:1;min-width:0}
+.demo-num{font-size:11px;font-weight:600;color:#999;letter-spacing:0.12em;display:block;margin-bottom:20px}
+body.dark-mode .demo-num{color:#555}
+.demo-title{font-size:clamp(24px,3vw,36px);font-weight:400;letter-spacing:-0.01em;line-height:1.4;margin-bottom:20px;color:#111}
+body.dark-mode .demo-title{color:#e8e8e8}
+.demo-desc{font-size:15px;line-height:1.8;color:#555;font-weight:300;word-break:keep-all;margin-bottom:12px}
+body.dark-mode .demo-desc{color:#999}
+.demo-sub{font-size:13px;color:#aaa;font-weight:300;line-height:1.6}
+
+/* Demo Chat Mock */
+.demo-chat-mock{background:rgba(0,0,0,0.03);border:1px solid rgba(0,0,0,0.06);border-radius:16px;overflow:hidden;max-width:420px}
+body.dark-mode .demo-chat-mock{background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.06)}
+.dcm-header{padding:14px 18px;border-bottom:1px solid rgba(0,0,0,0.05);display:flex;align-items:center;gap:10px}
+body.dark-mode .dcm-header{border-color:rgba(255,255,255,0.05)}
+.dcm-dot{width:7px;height:7px;border-radius:50%;background:#4ade80}
+.dcm-title{font-size:11px;letter-spacing:0.08em;color:#999;font-weight:500}
+.dcm-messages{padding:18px;display:flex;flex-direction:column;gap:16px;min-height:280px}
+.dcm-msg{opacity:0;transform:translateY(8px);transition:opacity 0.6s,transform 0.6s}
+.dcm-msg.show{opacity:1;transform:translateY(0)}
+.dcm-label{font-size:9px;letter-spacing:0.1em;color:#bbb;display:block;margin-bottom:4px}
+.dcm-user .dcm-label{text-align:right}
+.dcm-bubble{font-size:13px;line-height:1.7;color:#333;font-weight:300;padding:10px 14px;border-radius:10px}
+body.dark-mode .dcm-bubble{color:#ddd}
+.dcm-ai .dcm-bubble{background:transparent;padding-left:0;border-left:2px solid rgba(201,169,110,0.3);padding-left:12px}
+.dcm-user .dcm-bubble{background:rgba(0,0,0,0.04);text-align:right;border-radius:10px 10px 4px 10px}
+body.dark-mode .dcm-user .dcm-bubble{background:rgba(255,255,255,0.04)}
+
+/* Demo Profile Mock */
+.demo-profile-mock{background:rgba(0,0,0,0.03);border:1px solid rgba(0,0,0,0.06);border-radius:16px;overflow:hidden;max-width:420px}
+body.dark-mode .demo-profile-mock{background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.06)}
+.dpm-header{padding:14px 18px;border-bottom:1px solid rgba(0,0,0,0.05);display:flex;justify-content:space-between;align-items:center}
+body.dark-mode .dpm-header{border-color:rgba(255,255,255,0.05)}
+.dpm-title{font-size:12px;font-weight:500;letter-spacing:0.06em;color:#c9a96e}
+.dpm-ver{font-size:10px;color:#ccc}
+.dpm-body{padding:18px}
+.dpm-tag-area{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+.dpm-tag{padding:4px 10px;font-size:10px;border-radius:20px;border:1px solid rgba(0,0,0,0.08);color:#666;font-weight:400;opacity:0;transform:scale(0.8);transition:opacity 0.5s,transform 0.5s}
+body.dark-mode .dpm-tag{border-color:rgba(255,255,255,0.1);color:#aaa}
+.dpm-tag.show{opacity:1;transform:scale(1)}
+.dpm-section{margin-bottom:14px}
+.dpm-label{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#aaa;display:block;margin-bottom:6px;font-weight:500}
+.dpm-value,.dpm-narrative{font-size:13px;color:#444;line-height:1.7;font-weight:300}
+body.dark-mode .dpm-value,body.dark-mode .dpm-narrative{color:#bbb}
+.dpm-energy{display:flex;flex-direction:column;gap:4px}
+.dpm-energy-high{font-size:12px;color:#4ade80}
+.dpm-energy-low{font-size:12px;color:#f87171}
+
+/* Demo Essence Flow */
+.demo-essence-flow{display:flex;align-items:center;justify-content:center;gap:16px;padding:40px 20px;flex-wrap:wrap}
+.def-step{display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;background:rgba(0,0,0,0.03);border:1px solid rgba(0,0,0,0.06);border-radius:14px;min-width:80px;transition:transform 0.3s,box-shadow 0.3s}
+body.dark-mode .def-step{background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.06)}
+.def-step:hover{transform:translateY(-4px);box-shadow:0 8px 20px rgba(0,0,0,0.05)}
+.def-icon{font-size:11px;font-weight:600;letter-spacing:0.06em;color:var(--sub);font-family:var(--font-mono)}
+.def-label{font-size:11px;font-weight:500;color:#666;letter-spacing:0.04em}
+body.dark-mode .def-label{color:#aaa}
+.def-arrow{font-size:18px;color:#ccc}
+body.dark-mode .def-arrow{color:#444}
+
+/* ===== MOBILE RESPONSIVE ===== */
+/* ===== HAMBURGER ===== */
+.nav-hamburger{display:none;flex-direction:column;gap:4px;padding:8px;cursor:pointer!important;background:none;border:none;z-index:7001}
+.nav-hamburger span{display:block;width:18px;height:1.5px;background:var(--text);transition:all 0.3s;border-radius:1px}
+.nav-hamburger.open span:nth-child(1){transform:rotate(45deg) translate(4px,4px)}
+.nav-hamburger.open span:nth-child(2){opacity:0}
+.nav-hamburger.open span:nth-child(3){transform:rotate(-45deg) translate(4px,-4px)}
+.nav-mobile-menu{display:none;position:fixed;top:0;left:0;width:100%;height:100vh;height:100dvh;background:var(--bg);z-index:6999;flex-direction:column;align-items:center;justify-content:center;gap:28px;opacity:0;transition:opacity 0.3s}
+.nav-mobile-menu.show{display:flex;opacity:1}
+.nav-mobile-menu li{list-style:none;font-size:16px;font-weight:300;letter-spacing:0.1em;color:var(--text);cursor:pointer!important;padding:12px 24px;transition:0.2s}
+.nav-mobile-menu li:hover{opacity:0.6}
+/* ===== ESSENCE PROMPTS BLUR ===== */
+.essence-prompts{margin-top:16px;padding:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:12px}
+body:not(.dark-mode) .essence-prompts{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.06)}
+.ep-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.ep-title{font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--sub);display:flex;align-items:center;gap:6px}
+.ep-title svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.5}
+.ep-badge{font-size:8px;padding:2px 7px;border-radius:10px;background:rgba(255,200,0,0.15);color:#b8860b;font-weight:600}
+body.dark-mode .ep-badge{background:rgba(255,200,0,0.1);color:#daa520}
+.ep-list{display:flex;flex-direction:column;gap:5px}
+.ep-item{font-size:12px;line-height:1.6;color:var(--text);padding:7px 10px;background:rgba(255,255,255,0.03);border-radius:6px;border:1px solid rgba(255,255,255,0.04);overflow:hidden;transition:all 0.3s}
+body:not(.dark-mode) .ep-item{background:rgba(0,0,0,0.015);border-color:rgba(0,0,0,0.04)}
+.ep-item.locked{filter:blur(5px);user-select:none;pointer-events:none}
+.ep-item.preview{filter:blur(0)}
+.ep-unlock{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;padding:8px 16px;border:1px solid rgba(255,255,255,0.1);border-radius:8px;background:rgba(255,255,255,0.03);font-size:11px;color:var(--sub);cursor:pointer!important;transition:all 0.3s;font-family:inherit;width:100%}
+body:not(.dark-mode) .ep-unlock{border-color:rgba(0,0,0,0.1);background:rgba(0,0,0,0.02)}
+.ep-unlock:hover{background:rgba(255,255,255,0.08);color:var(--text)}
+.ep-unlock svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.5}
+/* ===== PATTERN INSIGHT CARD ===== */
+.insight-card{margin:8px 0;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;font-size:12px;color:var(--sub);display:flex;align-items:flex-start;gap:8px;animation:insightFade 0.6s ease}
+body:not(.dark-mode) .insight-card{background:rgba(0,0,0,0.02);border-color:rgba(0,0,0,0.05)}
+.insight-card .ic-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.insight-card .ic-text{line-height:1.5}
+@keyframes insightFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* ===== PROGRESS STAGES ===== */
+.um-depth-stages{display:flex;justify-content:space-between;margin-top:8px;position:relative}
+.um-depth-stages::before{content:'';position:absolute;top:50%;left:10%;right:10%;height:1px;background:rgba(255,255,255,0.06);z-index:0}
+body:not(.dark-mode) .um-depth-stages::before{background:rgba(0,0,0,0.06)}
+.um-stage{font-size:8px;font-weight:600;letter-spacing:0.06em;color:var(--sub);opacity:0.3;transition:all 0.6s;position:relative;z-index:1;padding:2px 4px}
+.um-stage.active{opacity:1;color:var(--text)}
+.um-stage.completed{opacity:0.6}
+/* ===== ESSENCE DOC GEN ===== */
+.essence-doc-gen{margin-top:14px;text-align:center}
+.ed-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px 16px;border:1px solid rgba(255,255,255,0.12);border-radius:10px;background:rgba(255,255,255,0.04);font-size:12px;font-weight:500;color:var(--text);cursor:pointer!important;transition:all 0.3s;font-family:inherit;letter-spacing:0.02em}
+body:not(.dark-mode) .ed-btn{border-color:rgba(0,0,0,0.1);background:rgba(0,0,0,0.02)}
+.ed-btn:hover{background:rgba(255,255,255,0.1);transform:translateY(-1px)}
+.ed-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.5}
+.ed-desc{font-size:9px;color:var(--sub);margin-top:6px;line-height:1.5;opacity:0.7}
+/* ===== MOBILE ===== */
+@media(max-width:768px){
+  *{cursor:auto!important}
+  .cursor-dot,.cursor-ring{display:none!important}
+  body::after{display:none}
+  nav{top:0;height:56px;padding:0 16px;border-radius:0;width:100%;max-width:100%}
+  .logo{font-size:15px}.logo svg{width:20px;height:20px}
+  .nav-center{display:none!important}
+  .nav-auth{display:none!important}
+  .nav-profile{display:none!important}
+  .nav-hamburger{display:flex}
+  .btn-theme{width:30px;height:30px}.btn-theme svg{width:13px;height:13px}
+  .lang-btn{padding:0 8px;height:30px;font-size:10px}
+  .container{padding:0 20px}
+  .hero-top{height:80vh;gap:14px}
+  .hl-logo{font-size:16px!important}
+  .hl-typing{font-size:22px!important}
+  .hl-buttons{flex-direction:column;gap:8px}
+  .hl-btn{font-size:10px;padding:10px 24px}
+  #page-about section{padding:80px 0!important}
+  .label{font-size:24px!important;margin-bottom:40px!important}
+  .phi-text{font-size:18px!important;line-height:1.6}
+  .phi-desc{font-size:13px!important}
+  .demo-section{padding:60px 0!important}
+  .demo-layout,.demo-layout-reverse{flex-direction:column!important;gap:24px;padding:0 20px}
+  .demo-title{font-size:20px!important}
+  .demo-desc{font-size:13px}
+  .demo-chat-mock,.demo-profile-mock{max-width:100%;width:100%}
+  .demo-essence-flow{gap:8px;padding:16px 8px}
+  .def-step{padding:12px;min-width:50px}.def-icon{font-size:16px}.def-label{font-size:8px}.def-arrow{font-size:12px}
+  .method-row{flex-direction:column!important;padding:50px 0!important}
+  .method-left,.method-right{width:100%!important}
+  .method-left{margin-bottom:30px}.method-right{text-align:left}
+  .big-typo{font-size:40px!important;justify-content:flex-start!important;filter:blur(0)!important;opacity:0.6!important}
+  .chatbox-wrap{padding:0 8px 8px!important;flex-direction:column;gap:8px}
+  .chatbox{max-width:100%;border-radius:16px}
+  .chatbox.expanded{height:calc(100vh - 80px)!important;height:calc(100dvh - 80px)!important;border-radius:16px 16px 0 0}
+  .unmask-panel{display:none!important}
+  .cb-bar{padding:0 12px!important;height:48px!important}
+  .cb-ta{font-size:14px!important}
+  .cb-btns-left,.cb-side-btns{gap:4px!important}
+  .cb-side-btns .cb-btn{display:none}.cb-side-btns .cb-btn:last-child{display:flex}
+  .cb-msgs{padding:12px!important}
+  .msg-body{max-width:90%!important;font-size:14px!important}
+  .msg-actions{opacity:1}
+  .cb-header{padding:10px 14px!important}
+  .cb-header-actions{gap:6px!important}
+  .svc-intro{padding:0 20px}
+  .svc-intro-title{font-size:24px!important}
+  .svc-intro-desc{font-size:13px!important}
+  .ir-grid{grid-template-columns:1fr}
+  .archive-map-canvas{height:auto;min-height:100vh;padding:0 20px;display:flex;flex-direction:column;align-items:center;gap:40px;padding-top:160px;padding-bottom:60px}
+  .archive-map-canvas .map-lines{display:none}
+  .map-node{position:relative!important;left:auto!important;top:auto!important;transform:none!important}
+  .map-label{position:relative;top:auto;left:auto;transform:none;margin-top:10px}
+  .map-container{transform:scale(0.7)!important}
+  .project-detail-inner{padding:70px 24px}
+  .project-detail-close{top:20px;right:20px;width:36px;height:36px}
+  .pd-gallery{grid-template-columns:1fr}.pd-gallery-item.wide{grid-column:span 1}
+  .pd-meta{flex-wrap:wrap;gap:20px}
+  .pricing-grid{grid-template-columns:1fr}
+  .mypage-grid{grid-template-columns:1fr}
+  .side-panel{width:100%!important;max-width:100%!important;right:0!important;border-radius:16px 16px 0 0!important;bottom:0!important;top:auto!important;max-height:70vh!important}
+  .cbp-scroll{padding:12px!important}
+  footer{flex-direction:column;gap:8px;text-align:center;padding:40px 0!important}
+}
+@media(max-width:480px){
+  nav{padding:0 12px;height:50px}
+  .hero-top{height:70vh}
+  .hl-typing{font-size:18px!important}
+  .demo-title{font-size:18px!important}
+  .dcm-messages{min-height:200px;padding:10px}
+  .dcm-bubble{font-size:12px}
+  .dpm-body{padding:12px}
+  .label{font-size:20px!important}
+}
+
+@media(max-width:480px){
+  nav{padding:0 12px;height:50px}
+  .nav-center{gap:12px;font-size:9px}
+  .demo-title{font-size:19px!important}
+  .demo-desc{font-size:12px}
+  .dcm-messages{min-height:220px;padding:12px}
+  .dcm-bubble{font-size:12px}
+  .dpm-body{padding:14px}
+}
+/* ===== END MOBILE ===== */
+.svc-page{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;position:relative}
+.svc-intro{text-align:center;max-width:560px;padding:0 30px}
+.svc-intro-num{font-size:11px;font-weight:600;color:#bbb;letter-spacing:0.15em;margin-bottom:16px}
+.svc-intro-title{font-size:clamp(28px,3.5vw,48px);font-weight:400;letter-spacing:-0.02em;margin-bottom:16px;color:#111}
+.svc-intro-desc{font-size:15px;color:#888;line-height:1.8;font-weight:400;word-break:keep-all}
+
+/* Service page entrance animation */
+.svc-anim{opacity:0;transform:translateY(20px);filter:blur(6px);transition:opacity 1.6s cubic-bezier(0.19,1,0.22,1),transform 1.6s cubic-bezier(0.19,1,0.22,1),filter 1.6s cubic-bezier(0.19,1,0.22,1)}
+.svc-anim.visible{opacity:1;transform:translateY(0);filter:blur(0)}
+
+/* ============================================
+   CHATBOX (v4 pattern – bottom fixed, height expand)
+   ============================================ */
+.chatbox-wrap{position:fixed;left:0;right:0;bottom:0;width:100%;display:flex;justify-content:center;align-items:flex-end;gap:12px;padding:0 24px 12px;z-index:9999;pointer-events:none}
+.chatbox-wrap>*{pointer-events:auto}
+.chatbox{width:100%;max-width:700px;display:flex;flex-direction:column;height:56px;overflow:hidden;border-radius:20px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.08);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);box-shadow:0 10px 40px rgba(0,0,0,0.03);transition:height 1.2s cubic-bezier(0.19,1,0.22,1),background 1s,box-shadow 1s,border-color 1s,backdrop-filter 1s,-webkit-backdrop-filter 1s;pointer-events:auto}
+.chatbox.expanded{height:min(76vh,calc(100vh - 140px));background:rgba(255,255,255,0.12);box-shadow:0 20px 80px rgba(0,0,0,0.04);border-color:rgba(255,255,255,0.12);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px)}
+/* UNMASK PANEL */
+.unmask-panel{width:100%;max-width:560px;height:min(76vh,calc(100vh - 140px));border-radius:20px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.08);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);box-shadow:0 20px 80px rgba(0,0,0,0.04);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.um-header{padding:16px 20px 12px;border-bottom:1px solid rgba(0,0,0,0.04);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.um-header-title{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#999;font-weight:500}
+.um-header-status{font-size:10px;color:#bbb;display:flex;align-items:center;gap:5px}
+.um-status-dot{width:5px;height:5px;border-radius:50%;background:#ccc;transition:background 0.5s}
+.um-status-dot.active{background:#4ade80;animation:statusPulse 2s ease-in-out infinite}
+@keyframes statusPulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.um-body{flex:1;overflow-y:auto;padding:16px 20px;scrollbar-width:none;-ms-overflow-style:none}
+.um-body::-webkit-scrollbar{display:none}
+.um-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;text-align:center}
+.um-empty-icon{width:40px;height:40px;border-radius:50%;border:1px solid rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center}
+.um-empty-icon svg{width:18px;height:18px;stroke:#ccc;fill:none;stroke-width:1.5}
+.um-empty-text{font-size:12px;color:#bbb;line-height:1.6}
+/* Data fragments */
+.um-fragment{opacity:0;transform:translateY(8px);transition:opacity 0.6s,transform 0.6s;margin-bottom:16px}
+.um-fragment.visible{opacity:1;transform:translateY(0)}
+.um-frag-label{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#aaa;margin-bottom:6px;font-weight:500}
+.um-frag-content{font-size:12px;color:#666;line-height:1.6}
+.um-frag-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.um-frag-tag{padding:3px 8px;border:1px solid rgba(0,0,0,0.06);border-radius:12px;font-size:10px;color:#888;background:rgba(0,0,0,0.02);animation:tagFadeIn 0.5s ease}
+@keyframes tagFadeIn{from{opacity:0;transform:scale(0.8)}to{opacity:1;transform:scale(1)}}
+.um-frag-bar{height:3px;border-radius:2px;background:rgba(0,0,0,0.04);margin-top:6px;overflow:hidden}
+.um-frag-bar-fill{height:100%;border-radius:2px;background:rgba(0,0,0,0.15);transition:width 1s cubic-bezier(0.4,0,0.2,1);width:0}
+.um-frag-node{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.um-frag-dot{width:6px;height:6px;border-radius:50%;background:#000;opacity:0.15;flex-shrink:0}
+.um-frag-line{font-size:11px;color:#777;line-height:1.5}
+/* Dark mode */
+body.dark-mode .um-header{border-bottom-color:rgba(255,255,255,0.04)}
+body.dark-mode .unmask-panel{background:rgba(20,20,20,0.6);border-color:rgba(255,255,255,0.06)}body.dark-mode .um-empty-icon{border-color:rgba(255,255,255,0.08)}
+body.dark-mode .um-empty-icon svg{stroke:#555}
+body.dark-mode .um-empty-text{color:#555}
+body.dark-mode .um-frag-content{color:#999}
+body.dark-mode .um-frag-tag{border-color:rgba(255,255,255,0.06);color:#777;background:rgba(255,255,255,0.03)}
+body.dark-mode .um-frag-bar{background:rgba(255,255,255,0.04)}
+body.dark-mode .um-frag-bar-fill{background:rgba(255,255,255,0.2)}
+body.dark-mode .um-frag-dot{background:#fff}
+body.dark-mode .um-frag-line{color:#888}
+.chatbox .cb-header,.chatbox .cb-msgs,.chatbox .cb-input{opacity:0;filter:blur(6px);transition:opacity 1s ease 0.3s,filter 1s ease 0.3s}
+.chatbox.expanded .cb-header,.chatbox.expanded .cb-msgs,.chatbox.expanded .cb-input{opacity:1;filter:blur(0)}
+
+/* Collapsed Bar */
+.cb-bar{display:flex;align-items:center;gap:10px;padding:14px 18px;min-height:56px;height:56px;cursor:pointer;flex-shrink:0}
+.cb-model{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:#999;padding:3px 10px;border-radius:6px;background:rgba(255,255,255,0.1);cursor:pointer;transition:0.2s;flex-shrink:0;-webkit-user-select:none;user-select:none}
+.cb-model:active{transform:scale(0.93);transition:0.06s}
+.cb-model:hover{background:rgba(0,0,0,0.07);color:#666}
+.cb-model .dot{width:5px;height:5px;border-radius:50%}
+.cb-model .arr{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2}
+.cb-ph{flex:1;font-size:14px;color:#bbb;font-weight:400;display:flex;align-items:center}
+.cb-caret{display:inline-block;width:1.5px;height:15px;background:#999;margin-right:4px;animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.chatbox.expanded .cb-ph,.chatbox.expanded .cb-caret{display:none}
+.chatbox.expanded .cb-bar{display:none}
+
+/* Expanded Body */
+.cb-body{display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0;position:relative}
+.cb-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0}
+.cb-header-left{display:flex;align-items:center;gap:8px}
+.cb-header-right{display:flex;align-items:center;gap:5px}
+.cb-header-logo{width:22px;height:22px;border-radius:6px;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center}
+.cb-header-logo svg{width:11px;height:11px;stroke:#fff;fill:none;stroke-width:1.5}
+.cb-header-name{font-size:12px;font-weight:500;color:#444}
+.cb-close{width:28px;height:28px;border-radius:7px;border:none;background:rgba(0,0,0,0.04);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:0.15s}
+.cb-close:hover{background:rgba(0,0,0,0.08)}
+.cb-close svg{width:12px;height:12px;stroke:#888;fill:none;stroke-width:2}
+
+/* Messages */
+.cb-msgs{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:16px;scrollbar-width:none;-ms-overflow-style:none}
+.cb-msgs::-webkit-scrollbar{display:none}
+.cb-welcome{display:flex;flex-direction:column;align-items:center;text-align:center;padding:30px 10px;flex:1;justify-content:center}
+.cb-welcome.hidden{display:none}
+.cb-welcome-t{font-size:17px;font-weight:400;color:#222;margin-bottom:5px}
+.cb-welcome-s{font-size:13px;color:#aaa;font-weight:400;line-height:1.5;max-width:260px}
+.cb-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:18px}
+.cb-chip{padding:7px 14px;border-radius:16px;font-size:11px;color:#555;background:rgba(255,255,255,0.2);border:1px solid rgba(0,0,0,0.03);cursor:pointer;transition:0.25s;font-family:inherit;font-weight:400}
+.cb-chip:hover{background:rgba(255,255,255,0.4);border-color:rgba(0,0,0,0.08);transform:translateY(-1px)}
+.cb-chip:active{transform:translateY(0) scale(0.95);transition:0.06s}
+
+/* Msg Bubbles */
+.msg{display:flex;gap:10px;animation:msgIn 0.4s ease;position:relative}
+.msg.msg-right{flex-direction:row-reverse}
+.msg.msg-right .msg-body{text-align:right;display:flex;flex-direction:column;align-items:flex-end}
+.msg.msg-right .msg-text{background:rgba(255,255,255,0.45);display:inline-block;padding:10px 14px;border-radius:14px 14px 4px 14px;text-align:left;width:fit-content;max-width:85%;border:1px solid rgba(0,0,0,0.04)}
+.msg:not(.msg-right) .msg-body{display:flex;flex-direction:column;align-items:flex-start}
+.msg:not(.msg-right) .msg-text{background:rgba(255,255,255,0.38);padding:10px 14px;border-radius:14px 14px 14px 4px;border:1px solid rgba(0,0,0,0.04);width:fit-content;max-width:85%}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg-ava{width:24px;height:24px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.msg-ava.ai{background:rgba(0,0,0,0.6)}.msg-ava.ai svg{width:11px;height:11px;stroke:#fff;fill:none;stroke-width:1.5}
+.msg-ava.user{background:rgba(0,0,0,0.06)}.msg-ava.user svg{width:11px;height:11px;stroke:#555;fill:none;stroke-width:1.5}
+.msg-body{flex:1;min-width:0}
+.msg-role{font-size:10px;font-weight:600;color:#bbb;margin-bottom:4px;letter-spacing:0.05em}
+.msg-text{font-size:14px;line-height:1.7;color:#222;font-weight:400;word-break:keep-all}
+
+/* Msg actions (bookmark, image) */
+.msg-actions{display:flex;gap:4px;margin-top:4px;opacity:0;transition:opacity 0.2s}
+.msg:hover .msg-actions{opacity:1}
+.msg-action-btn{width:22px;height:22px;border:none;background:rgba(0,0,0,0.04);border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:0.15s}
+.msg-action-btn:hover{background:rgba(0,0,0,0.08)}
+.msg-action-btn svg{width:11px;height:11px;stroke:#999;fill:none;stroke-width:1.5}
+.msg-action-btn.bookmarked{background:rgba(0,0,0,0.08)}
+.msg-action-btn.bookmarked svg{stroke:#000;fill:#000}
+
+/* Msg image */
+.msg-img{max-width:200px;border-radius:10px;margin-top:6px;cursor:pointer;transition:0.2s}
+.msg-img:hover{transform:scale(1.02)}
+
+.typing span{display:inline-block;width:5px;height:5px;border-radius:50%;background:#ccc;margin-right:4px;animation:tDot 1.4s ease infinite}
+.typing span:nth-child(2){animation-delay:0.15s}.typing span:nth-child(3){animation-delay:0.3s}
+@keyframes tDot{0%,80%,100%{opacity:0.3;transform:scale(0.8)}40%{opacity:1;transform:scale(1.2)}}
+
+/* Input */
+.cb-input{padding:10px 16px 12px;border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0}
+.cb-model-row{display:flex;align-items:center;padding:0 4px 10px}
+.cb-input-row{display:flex;align-items:flex-end;gap:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:8px 10px;transition:0.25s}
+.cb-input-row:focus-within{border-color:rgba(255,255,255,0.2);box-shadow:0 4px 20px rgba(0,0,0,0.02);background:rgba(255,255,255,0.15)}
+/* Attach btn */
+.cb-attach{width:28px;height:28px;border:none;background:rgba(0,0,0,0.04);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:0.15s;flex-shrink:0}
+.cb-attach:hover{background:rgba(0,0,0,0.08)}
+.cb-attach:active{transform:scale(0.88);transition:0.06s}
+.cb-attach svg{width:13px;height:13px;stroke:#888;fill:none;stroke-width:1.5}
+
+/* Header icon buttons */
+.cb-icon-btn{width:28px;height:28px;border-radius:7px;border:none;background:rgba(0,0,0,0.04);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:0.15s}
+.cb-icon-btn:hover{background:rgba(0,0,0,0.08)}
+.cb-icon-btn:active{transform:scale(0.88);transition:0.06s}
+.cb-icon-btn svg{width:13px;height:13px;stroke:#888;fill:none;stroke-width:1.5}
+.cb-icon-btn.active{background:#000}
+.cb-icon-btn.active svg{stroke:#fff}
+.cb-icon-btn.pulse{animation:btnPulse 0.6s ease}
+@keyframes btnPulse{0%{transform:scale(1)}50%{transform:scale(1.2);background:rgba(0,0,0,0.15)}100%{transform:scale(1)}}
+/* Unmask button enhancements */
+#cbProfileBtn{position:relative}
+.unmask-badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:#000;color:#fff;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;padding:0 4px;opacity:0;transform:scale(0);transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1);pointer-events:none}
+.unmask-badge.show{opacity:1;transform:scale(1)}
+body.dark-mode .unmask-badge{background:#fff;color:#000}
+.cb-icon-btn.unmask-glow{animation:unmaskGlow 1.5s ease}
+@keyframes unmaskGlow{0%{transform:scale(1);box-shadow:none}15%{transform:scale(1.3);box-shadow:0 0 20px rgba(0,0,0,0.2)}30%{transform:scale(1.15)}50%{transform:scale(1.25);box-shadow:0 0 12px rgba(0,0,0,0.1)}100%{transform:scale(1);box-shadow:none}}
+body.dark-mode .cb-icon-btn.unmask-glow{animation:unmaskGlowDk 1.5s ease}
+@keyframes unmaskGlowDk{0%{transform:scale(1);box-shadow:none}15%{transform:scale(1.3);box-shadow:0 0 20px rgba(255,255,255,0.25)}30%{transform:scale(1.15)}50%{transform:scale(1.25);box-shadow:0 0 12px rgba(255,255,255,0.15)}100%{transform:scale(1);box-shadow:none}}
+.cb-icon-btn.unmask-shake{animation:unmaskShake 0.5s ease}
+@keyframes unmaskShake{0%,100%{transform:translateX(0)}15%{transform:translateX(-3px)}30%{transform:translateX(3px)}45%{transform:translateX(-2px)}60%{transform:translateX(2px)}75%{transform:translateX(-1px)}}
+
+/* Overlay panels (history / profile) */
+.cb-overlay-panel{display:none;position:absolute;top:54px;left:0;right:0;bottom:0;background:rgba(255,255,255,0.92);backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);z-index:10;overflow-y:auto;padding:20px;animation:panelIn 0.8s ease;scrollbar-width:none;-ms-overflow-style:none}
+.cb-overlay-panel::-webkit-scrollbar{display:none}
+.cb-overlay-panel.show{display:block}
+@keyframes panelIn{from{opacity:0;filter:blur(6px);transform:translateY(6px)}to{opacity:1;filter:blur(0);transform:translateY(0)}}
+.cbp-title{font-size:14px;font-weight:500;color:#333;letter-spacing:-0.01em;margin-bottom:16px}
+.cbp-profile-sub{font-size:12px;color:#aaa;font-weight:400;margin-bottom:16px;line-height:1.5}
+
+/* History items */
+.cbh-item{padding:12px 14px;border-radius:10px;cursor:pointer;transition:background 0.15s;margin-bottom:4px;background:rgba(255,255,255,0.5)}
+.cbh-item:hover{background:rgba(255,255,255,0.75)}
+.cbh-item-date{font-size:10px;color:#bbb;margin-bottom:4px;letter-spacing:0.02em}
+.cbh-item-preview{font-size:13px;color:#333;font-weight:400;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cbh-empty{text-align:center;padding:40px 10px;font-size:13px;color:#999;font-weight:400;line-height:1.6}
+
+/* Profile tags */
+.cbp-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px}
+
+/* Gallery grid */
+.cbp-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.cbp-gallery-item{aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:pointer;position:relative}
+.cbp-gallery-item img{width:100%;height:100%;object-fit:cover;transition:transform 0.3s}
+.cbp-gallery-item:hover img{transform:scale(1.05)}
+.cbp-gallery-empty{grid-column:1/-1;text-align:center;padding:40px 10px;font-size:13px;color:#999;font-weight:400;line-height:1.6}
+
+/* File attachment preview */
+.cb-file-preview{display:flex;align-items:center;gap:8px;padding:8px 12px;margin:0 16px 6px;background:rgba(0,0,0,0.03);border-radius:10px;font-size:12px;color:#555}
+.cb-file-preview-icon{width:28px;height:28px;border-radius:6px;background:rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cb-file-preview-icon svg{width:13px;height:13px;stroke:#666;fill:none;stroke-width:1.5}
+.cb-file-preview-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cb-file-preview-remove{width:20px;height:20px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0.5}
+.cb-file-preview-remove:hover{opacity:1}
+.cb-file-preview-remove svg{width:10px;height:10px;stroke:#999;fill:none;stroke-width:2}
+.cbp-tag{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;background:rgba(0,0,0,0.04);color:#555;animation:tagIn 0.4s ease;border:1px solid rgba(0,0,0,0.06)}
+.cbp-tag.new{background:rgba(0,0,0,0.08);color:#000;border-color:rgba(0,0,0,0.12)}
+@keyframes tagIn{from{opacity:0;transform:scale(0.8)}to{opacity:1;transform:scale(1)}}
+.cbp-section{margin-bottom:16px;padding:14px;background:rgba(255,255,255,0.5);border-radius:10px;border:1px solid rgba(0,0,0,0.04)}
+.cbp-section.locked{opacity:0.3;pointer-events:none}
+.cbp-section.unlocked{animation:sectionUnlock 0.8s ease}
+@keyframes sectionUnlock{0%{opacity:0.3;transform:translateY(4px)}100%{opacity:1;transform:translateY(0)}}
+.cbp-section-title{font-size:11px;font-weight:500;color:#999;letter-spacing:0;margin-bottom:8px}
+.cbp-section-value{font-size:13px;color:#333;font-weight:400;line-height:1.6;word-break:keep-all}
+/* Unmask depth & status */
+.um-depth-wrap{margin-bottom:18px}
+.um-depth-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.um-depth-title{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#aaa;font-weight:500}
+.um-depth-count{font-size:10px;color:#bbb}
+.um-depth-bar{height:3px;border-radius:2px;background:rgba(0,0,0,0.05);overflow:hidden}
+.um-depth-fill{height:100%;border-radius:2px;background:#000;opacity:0.2;width:0;transition:width 1.5s cubic-bezier(0.4,0,0.2,1)}
+.um-status{font-size:10px;color:#bbb;display:flex;align-items:center;gap:5px;margin-bottom:16px}
+.um-status-dot{width:5px;height:5px;border-radius:50%;background:#ccc;transition:background 0.5s}
+.um-status-dot.active{background:#4ade80;animation:umPulse 2s ease infinite}
+@keyframes umPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(74,222,128,0.4)}50%{opacity:0.6;box-shadow:0 0 6px 2px rgba(74,222,128,0.15)}}
+body.dark-mode .um-depth-bar{background:rgba(255,255,255,0.05)}
+body.dark-mode .um-depth-fill{background:#fff;opacity:0.25}
+.cbp-prompt-wrap{margin-top:20px;padding:14px;background:rgba(0,0,0,0.02);border-radius:10px;border:1px solid rgba(0,0,0,0.04)}
+.cbp-prompt{font-size:12px;color:#888;line-height:1.7;white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto;scrollbar-width:none}
+.cbp-prompt::-webkit-scrollbar{display:none}
+.cb-ta{flex:1;border:none;outline:none;background:transparent;font-size:14px;font-family:inherit;color:#111;resize:none;line-height:1.5;max-height:100px;min-height:30px;font-weight:400;padding:4px 0}
+.cb-ta::placeholder{color:#bbb}
+.cb-send{width:30px;height:30px;border-radius:10px;background:#000;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0.12;transition:0.2s}
+.cb-send.ready{opacity:1}
+.cb-send:active{transform:scale(0.88);transition:0.06s}
+.cb-send svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2}
+
+/* UNMASK */
+.btn-unmask-start{margin-top:28px;padding:12px 28px;border:1px solid #000;border-radius:8px;background:#000;color:#fff;font-size:13px;font-weight:500;cursor:pointer;transition:0.2s;font-family:inherit}
+.btn-unmask-start:hover{background:#222}
+
+/* INTERPRET */
+.interpret-input-wrap{display:flex;gap:10px;max-width:420px;margin:28px auto 0}
+.interpret-input{flex:1;padding:13px 18px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;font-size:14px;font-family:inherit;outline:none;transition:0.2s;background:rgba(255,255,255,0.7);backdrop-filter:blur(10px)}
+.interpret-input:focus{border-color:rgba(0,0,0,0.2);background:rgba(255,255,255,0.9)}
+.interpret-go{padding:13px 24px;background:#000;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;transition:0.2s;font-family:inherit}
+.interpret-go:hover{background:#222}
+.interpret-result{width:100%;max-width:600px;margin:40px auto 0;padding:0 20px;animation:msgIn 0.6s ease}
+.ir-header{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+.ir-field{font-size:20px;font-weight:500;color:#111}
+.ir-badge{font-size:10px;font-weight:600;color:#999;letter-spacing:0.08em;padding:4px 10px;border:1px solid rgba(0,0,0,0.08);border-radius:20px}
+.ir-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.ir-card{padding:18px;background:rgba(255,255,255,0.5);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(0,0,0,0.04);border-radius:12px}
+.ir-card-title{font-size:11px;font-weight:600;color:#999;margin-bottom:10px;letter-spacing:0.02em}
+.ir-card-body{font-size:14px;color:#222;font-weight:400;line-height:1.6}
+.ir-insight{padding:20px;background:rgba(0,0,0,0.03);border-radius:12px;border:1px solid rgba(0,0,0,0.04)}
+#page-interpret .svc-page{overflow-y:auto;padding-bottom:80px}
+
+/* ARCHIVE */
+#page-archive{padding-top:0;overflow-y:auto;overflow-x:hidden}
+.archive-map{position:relative;width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.archive-map-header{position:absolute;top:100px;left:50%;transform:translateX(-50%);text-align:center;z-index:5;pointer-events:none}
+.archive-map-title{font-size:clamp(28px,3vw,44px);font-weight:300;letter-spacing:-0.02em;margin-bottom:8px;color:var(--text)}
+.archive-map-sub{font-size:13px;color:#999;font-weight:300}
+.archive-map-canvas{position:relative;width:100%;max-width:1100px;height:75vh;margin:0 auto}
+.map-lines{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.map-lines line{stroke:rgba(0,0,0,0.06);stroke-width:0.5;transition:stroke 0.4s}
+body.dark-mode .map-lines line{stroke:rgba(255,255,255,0.06)}
+.map-node{position:absolute;z-index:3;cursor:pointer;transform:translate(-50%,-50%)}
+.map-dot{width:8px;height:8px;border-radius:50%;background:#000;transition:transform 0.3s,box-shadow 0.3s;position:relative}
+.map-dot::after{content:'';position:absolute;top:-6px;left:-6px;width:20px;height:20px;border-radius:50%;border:1px solid rgba(0,0,0,0.08);transition:0.3s}
+body.dark-mode .map-dot{background:#fff}
+body.dark-mode .map-dot::after{border-color:rgba(255,255,255,0.1)}
+.map-node:hover .map-dot{transform:scale(1.8);box-shadow:0 0 24px rgba(0,0,0,0.2)}
+body.dark-mode .map-node:hover .map-dot{box-shadow:0 0 24px rgba(255,255,255,0.3)}
+.map-node:active .map-dot{transform:scale(0.6)!important;transition:transform 0.08s}
+.map-node:hover .map-dot::after{transform:scale(1.6);border-color:rgba(0,0,0,0.15)}
+body.dark-mode .map-node:hover .map-dot::after{border-color:rgba(255,255,255,0.2)}
+.map-label{position:absolute;top:20px;left:50%;transform:translateX(-50%);white-space:nowrap;text-align:center;pointer-events:none}
+.map-label-cat{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#999;margin-bottom:2px;font-weight:500}
+.map-label-name{font-size:13px;font-weight:500;letter-spacing:0.02em;color:var(--text)}
+/* Breathing glow */
+.map-dot-glow{position:absolute;top:50%;left:50%;width:30px;height:30px;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(0,0,0,0.06) 0%,transparent 70%);animation:dotBreathe 4s ease-in-out infinite;pointer-events:none}
+body.dark-mode .map-dot-glow{background:radial-gradient(circle,rgba(255,255,255,0.08) 0%,transparent 70%)}
+@keyframes dotBreathe{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:0.6}50%{transform:translate(-50%,-50%) scale(2.2);opacity:0.15}}
+.map-node[data-node="0"] .map-dot-glow{animation-delay:0s}
+.map-node[data-node="1"] .map-dot-glow{animation-delay:-0.7s}
+.map-node[data-node="2"] .map-dot-glow{animation-delay:-1.4s}
+.map-node[data-node="3"] .map-dot-glow{animation-delay:-2.1s}
+.map-node[data-node="4"] .map-dot-glow{animation-delay:-2.8s}
+.map-node[data-node="5"] .map-dot-glow{animation-delay:-3.5s}
+/* Twinkle sparks */
+.map-spark{position:absolute;width:2px;height:2px;border-radius:50%;background:#000;opacity:0;pointer-events:none}
+body.dark-mode .map-spark{background:#fff}
+.map-spark.s1{top:-12px;left:4px;animation:sparkle 5s ease-in-out infinite 0s}
+.map-spark.s2{top:6px;left:-10px;animation:sparkle 5s ease-in-out infinite 1.7s}
+.map-spark.s3{top:10px;left:14px;animation:sparkle 5s ease-in-out infinite 3.3s}
+@keyframes sparkle{0%,85%,100%{opacity:0;transform:scale(0)}90%{opacity:0.8;transform:scale(1.2)}95%{opacity:0;transform:scale(0)}}
+/* Pulse animation on dots */
+.map-dot::before{content:'';position:absolute;top:50%;left:50%;width:8px;height:8px;border-radius:50%;background:rgba(0,0,0,0.08);transform:translate(-50%,-50%);animation:mapPulse 3s ease-in-out infinite}
+body.dark-mode .map-dot::before{background:rgba(255,255,255,0.08)}
+@keyframes mapPulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:0.6}50%{transform:translate(-50%,-50%) scale(3);opacity:0}}
+.map-node[data-node="0"] .map-dot::before{animation-delay:0s}
+.map-node[data-node="1"] .map-dot::before{animation-delay:0.5s}
+.map-node[data-node="2"] .map-dot::before{animation-delay:1s}
+.map-node[data-node="3"] .map-dot::before{animation-delay:1.5s}
+.map-node[data-node="4"] .map-dot::before{animation-delay:2s}
+.map-node[data-node="5"] .map-dot::before{animation-delay:2.5s}
+/* Node floating */
+.map-node{animation:nodeFloat 6s ease-in-out infinite}
+.map-node[data-node="1"]{animation-delay:-1s}
+.map-node[data-node="2"]{animation-delay:-2s}
+.map-node[data-node="3"]{animation-delay:-3.5s}
+.map-node[data-node="4"]{animation-delay:-4.2s}
+.map-node[data-node="5"]{animation-delay:-5s}
+@keyframes nodeFloat{0%,100%{margin-top:0}50%{margin-top:-6px}}
+/* Orbital micro-particles around each node */
+.map-orbit{position:absolute;top:50%;left:50%;width:40px;height:40px;transform:translate(-50%,-50%);pointer-events:none}
+.map-orbit-dot{position:absolute;width:2px;height:2px;border-radius:50%;background:rgba(0,0,0,0.2);animation:orbitSpin 8s linear infinite}
+body.dark-mode .map-orbit-dot{background:rgba(255,255,255,0.25)}
+.map-orbit-dot:nth-child(1){animation-duration:6s;top:0;left:50%}
+.map-orbit-dot:nth-child(2){animation-duration:8s;animation-delay:-2s;top:50%;left:100%}
+.map-orbit-dot:nth-child(3){animation-duration:10s;animation-delay:-4s;top:100%;left:50%}
+@keyframes orbitSpin{from{transform:rotate(0deg) translateX(18px) rotate(0deg)}to{transform:rotate(360deg) translateX(18px) rotate(-360deg)}}
+/* Line dash animation */
+.map-lines line{stroke-dasharray:4 8;animation:lineDash 20s linear infinite}
+@keyframes lineDash{from{stroke-dashoffset:0}to{stroke-dashoffset:-120}}
+
+body.pd-open .map-node,body.pd-open .map-orbit-dot,body.pd-open .map-dot::before,body.pd-open .map-dot-glow,body.pd-open .map-spark{animation-play-state:paused!important}
+.project-detail{position:fixed;top:0;left:0;width:100%;height:100%;z-index:10000;opacity:0;visibility:hidden;transition:opacity 0.6s cubic-bezier(0.4,0,0.2,1),visibility 0s 0.6s;will-change:opacity}
+.project-detail.show{opacity:1;visibility:visible;transition:opacity 0.6s cubic-bezier(0.4,0,0.2,1),visibility 0s 0s}
+.project-detail-bg{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.75);backdrop-filter:blur(50px);-webkit-backdrop-filter:blur(50px)}
+body.dark-mode .project-detail-bg{background:rgba(10,10,10,0.75)}
+.project-detail-inner{position:relative;z-index:2;max-width:900px;margin:0 auto;height:100%;overflow-y:auto;padding:80px 60px;scrollbar-width:none;-ms-overflow-style:none}
+.project-detail-inner::-webkit-scrollbar{display:none}
+.project-detail-close{position:fixed;top:30px;right:40px;width:40px;height:40px;border:1px solid rgba(0,0,0,0.1);border-radius:50%;background:rgba(255,255,255,0.6);backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:3;transition:0.3s}
+.project-detail-close:hover{background:rgba(0,0,0,0.05);border-color:rgba(0,0,0,0.2)}
+.project-detail-close svg{width:16px;height:16px;stroke:#333;fill:none;stroke-width:1.5}
+body.dark-mode .project-detail-close{border-color:rgba(255,255,255,0.1);background:rgba(30,30,30,0.6)}
+body.dark-mode .project-detail-close:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.2)}
+body.dark-mode .project-detail-close svg{stroke:#ccc}
+.pd-cat{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#999;margin-bottom:12px;font-weight:500}
+.pd-name{font-size:clamp(36px,5vw,56px);font-weight:300;letter-spacing:-0.03em;margin-bottom:8px;color:var(--text);line-height:1.1}
+.pd-sub{font-size:16px;color:#888;font-style:italic;margin-bottom:40px;font-weight:300}
+.pd-gallery{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:40px}
+.pd-gallery-item{aspect-ratio:4/3;border-radius:10px;overflow:hidden;position:relative}
+.pd-gallery-item.wide{grid-column:span 2;aspect-ratio:21/9}
+.pd-gallery-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#aaa;letter-spacing:0.06em;text-transform:uppercase;border:1px solid rgba(0,0,0,0.04)}
+body.dark-mode .pd-gallery-placeholder{border-color:rgba(255,255,255,0.06);color:#555}
+/* Generative patterns for placeholders */
+.pd-gallery-placeholder{background-size:10px 10px}
+.pd-gallery-item img{width:100%;height:100%;object-fit:cover;display:block;border-radius:10px}
+.pd-pat-dots{background-image:radial-gradient(rgba(0,0,0,0.06) 1px,transparent 1px);background-size:8px 8px}
+.pd-pat-lines{background-image:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(0,0,0,0.03) 4px,rgba(0,0,0,0.03) 5px)}
+.pd-pat-grid{background-image:linear-gradient(rgba(0,0,0,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.03) 1px,transparent 1px);background-size:16px 16px}
+.pd-pat-cross{background-image:radial-gradient(rgba(0,0,0,0.04) 1.5px,transparent 1.5px),radial-gradient(rgba(0,0,0,0.04) 1.5px,transparent 1.5px);background-size:12px 12px;background-position:0 0,6px 6px}
+body.dark-mode .pd-pat-dots{background-image:radial-gradient(rgba(255,255,255,0.06) 1px,transparent 1px)}
+body.dark-mode .pd-pat-lines{background-image:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(255,255,255,0.04) 4px,rgba(255,255,255,0.04) 5px)}
+body.dark-mode .pd-pat-grid{background-image:linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.04) 1px,transparent 1px)}
+body.dark-mode .pd-pat-cross{background-image:radial-gradient(rgba(255,255,255,0.05) 1.5px,transparent 1.5px),radial-gradient(rgba(255,255,255,0.05) 1.5px,transparent 1.5px)}
+.pd-section{margin-bottom:32px}
+.pd-section-title{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#999;margin-bottom:10px;font-weight:500}
+.pd-section-body{font-size:14px;line-height:1.8;color:#555;word-break:keep-all}
+body.dark-mode .pd-section-body{color:#999}
+.pd-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:32px}
+.pd-tag{padding:5px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:20px;font-size:11px;color:#666;letter-spacing:0.02em}
+body.dark-mode .pd-tag{border-color:rgba(255,255,255,0.08);color:#888}
+.pd-meta{display:flex;gap:40px;padding-top:24px;border-top:1px solid rgba(0,0,0,0.04);margin-top:40px}
+body.dark-mode .pd-meta{border-top-color:rgba(255,255,255,0.04)}
+.pd-meta-item{display:flex;flex-direction:column;gap:4px}
+.pd-meta-label{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#aaa;font-weight:500}
+.pd-meta-value{font-size:13px;color:var(--text);font-weight:400}
+/* archive detail styles moved to map-card */
+
+/* MY PAGE */
+#page-mypage{padding-top:115px;overflow-y:auto}
+.mypage-inner{max-width:800px;margin:0 auto;padding:0 40px 80px}
+.mypage-title{font-size:28px;font-weight:300;margin-bottom:40px}
+.mypage-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.mypage-card{padding:28px 24px;border:1px solid rgba(0,0,0,0.05);border-radius:12px;background:rgba(255,255,255,0.6);backdrop-filter:blur(16px)}
+.mc-label{font-size:10px;font-weight:600;color:#aaa;letter-spacing:0.08em;margin-bottom:14px}
+.mc-value{font-size:22px;font-weight:300;margin-bottom:4px}
+.mc-sub{font-size:12px;color:#999}
+.sub-badge{display:inline-block;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.05em;background:rgba(0,0,0,0.05);color:#999}
+.sub-badge.pro{background:#000;color:#fff}
+.btn-upgrade{margin-top:16px;padding:10px 22px;font-size:12px;font-weight:500;border:1px solid #000;border-radius:8px;background:#000;color:#fff;cursor:pointer;transition:0.2s;font-family:inherit;display:block}
+.btn-upgrade:hover{background:#222}
+
+/* MODALS */
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0);backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px);z-index:9000;display:none;align-items:center;justify-content:center;transition:background 0.4s,backdrop-filter 0.4s,-webkit-backdrop-filter 0.4s}
+.modal-overlay.show{display:flex;animation:modalBgIn 1s ease forwards}
+@keyframes modalBgIn{from{background:rgba(0,0,0,0);backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px)}to{background:rgba(0,0,0,0.2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}}
+.login-modal,.pricing-modal{opacity:0;transform:translateY(16px) scale(0.98);filter:blur(8px);animation:modalContentIn 1.4s cubic-bezier(0.19,1,0.22,1) 0.2s forwards}
+@keyframes modalContentIn{to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}
+.login-modal{background:rgba(255,255,255,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:16px;padding:48px 40px 40px;max-width:400px;width:90%;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,0.15)}
+.login-logo svg{width:36px;height:36px;fill:none;stroke:#000;stroke-width:1.5;margin-bottom:24px}
+.login-title{font-size:20px;font-weight:400;margin-bottom:8px}
+.login-sub{font-size:13px;color:#999;margin-bottom:32px;font-weight:300}
+.btn-google{width:100%;padding:14px;border:1px solid #ddd;border-radius:10px;background:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:0.2s;font-family:inherit}
+.btn-google:hover{background:#f8f8f8;border-color:#bbb}
+.btn-google:active{transform:scale(0.97);transition:0.06s}
+.btn-google svg{width:18px;height:18px}
+.login-terms{font-size:11px;color:#bbb;margin-top:20px}.login-terms a{color:#888}
+.pricing-modal{background:rgba(255,255,255,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:16px;padding:48px 40px 40px;max-width:700px;width:90%;text-align:center;position:relative;box-shadow:0 30px 80px rgba(0,0,0,0.15);max-height:90vh;overflow-y:auto}
+.pricing-title{font-size:24px;font-weight:400;margin-bottom:8px}
+.pricing-sub{font-size:13px;color:#999;margin-bottom:32px;font-weight:300}
+.pricing-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:left}
+.price-card{padding:28px 24px;border:1px solid rgba(0,0,0,0.06);border-radius:12px;display:flex;flex-direction:column}
+.price-card.featured{border-color:#000}
+.pc-name{font-size:16px;font-weight:500;margin-bottom:8px}
+.pc-price{font-size:28px;font-weight:300;margin-bottom:8px}.pc-price span{font-size:13px;color:#999}
+.pc-desc{font-size:12px;color:#999;margin-bottom:20px}
+.pc-features{list-style:none;margin-bottom:24px}
+.pc-features li{font-size:13px;color:#444;padding:4px 0;font-weight:300}.pc-features li::before{content:"✓ ";color:#000;font-weight:600}
+.btn-price{padding:12px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:0.2s;text-align:center;border:1px solid #000;font-family:inherit;margin-top:auto}
+.btn-price.primary{background:#000;color:#fff}.btn-price.primary:hover{background:#222}.btn-price.primary:active{transform:scale(0.96);transition:0.06s}
+.btn-price.secondary{background:transparent;color:#999;border-color:#ddd;cursor:default}
+.modal-close{position:absolute;top:16px;right:16px;width:32px;height:32px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.modal-close svg{width:16px;height:16px;stroke:#999;fill:none;stroke-width:2}
+
+#modelMenu{position:fixed;z-index:99999;background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:4px;min-width:170px;box-shadow:0 8px 30px rgba(0,0,0,0.12);display:none;pointer-events:auto}
+#modelMenu.show{display:block}
+.mm-opt{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:7px;font-size:12px;color:#333;cursor:pointer;transition:0.15s}
+.mm-opt:hover{background:rgba(0,0,0,0.04)}
+.mm-opt.active{font-weight:600;background:rgba(0,0,0,0.04)}
+.mm-opt .md{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.mm-opt.locked{opacity:0.45;cursor:default}.mm-opt.locked:hover{background:transparent}
+.mm-lock{margin-left:auto;font-size:9px;font-weight:600;padding:2px 7px;border-radius:4px;background:rgba(0,0,0,0.06);color:#999}
+
+/* ============ DARK MODE OVERRIDES ============ */
+body.dark-mode nav{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.08);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px)}
+body.dark-mode .logo{color:#fff}
+body.dark-mode .logo svg{stroke:#fff}
+body.dark-mode .nav-center li{color:#666}
+body.dark-mode .nav-center li:hover{color:#eee}
+body.dark-mode .nav-center li.active{color:#fff}
+body.dark-mode .nav-center li.active::after{background:#fff}
+body.dark-mode .btn-signin{color:#ccc;border-color:rgba(255,255,255,0.12)}
+body.dark-mode .btn-signin:hover{border-color:rgba(255,255,255,0.25);background:rgba(255,255,255,0.04)}
+body.dark-mode .nav-name{color:#ccc}
+body.dark-mode .nav-profile-btn{color:#ccc;border-color:rgba(255,255,255,0.12)}
+body.dark-mode .nav-profile-btn:hover{border-color:rgba(255,255,255,0.25);background:rgba(255,255,255,0.04)}
+body.dark-mode .profile-dropdown{background:#1a1a1a;border-color:rgba(255,255,255,0.08);box-shadow:0 8px 30px rgba(0,0,0,0.4)}
+body.dark-mode .pd-item{color:#ccc}
+body.dark-mode .pd-item:hover{background:rgba(255,255,255,0.06)}
+body.dark-mode .hl-logo{color:#fff;text-shadow:0 0 30px rgba(0,0,0,0.5)}
+body.dark-mode .hl-typing{color:#ddd;text-shadow:0 0 40px rgba(0,0,0,0.5)}
+body.dark-mode .hl-typing .cursor{background:#fff}
+body.dark-mode .hl-btn{color:#ddd;border-color:rgba(255,255,255,0.15);background:rgba(255,255,255,0.04)}
+body.dark-mode .hl-btn:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.3)}
+body.dark-mode .label{color:#fff;text-shadow:0 0 30px rgba(0,0,0,0.5)}
+body.dark-mode .phi-text{color:#ddd}
+body.dark-mode .phi-desc{color:#888}
+body.dark-mode .m-num{color:#666}
+body.dark-mode .m-desc{color:#999}
+body.dark-mode .big-typo{color:#fff;text-shadow:0 0 40px rgba(0,0,0,0.5)}
+body.dark-mode .m-btn{border-color:#555;color:#ddd}
+body.dark-mode .m-btn:hover{border-color:#fff;background:#fff;color:#000}
+body.dark-mode .method-row{border-bottom-color:rgba(255,255,255,0.04)}
+body.dark-mode #page-about section{border-bottom-color:rgba(255,255,255,0.04)}
+body.dark-mode footer{color:#666;border-top-color:rgba(255,255,255,0.06)}
+body.dark-mode .svc-intro-title{color:#eee}
+body.dark-mode .svc-intro-desc{color:#777}
+body.dark-mode .svc-intro-num{color:#555}
+body.dark-mode .chatbox{background:rgba(30,30,30,0.6);border-color:rgba(255,255,255,0.06)}
+body.dark-mode .chatbox.expanded{background:rgba(20,20,20,0.75);border-color:rgba(255,255,255,0.08)}
+body.dark-mode .cb-header{border-bottom-color:rgba(255,255,255,0.06)}
+body.dark-mode .cb-header-name{color:#ccc}
+body.dark-mode .cb-header-logo{background:rgba(255,255,255,0.12)}
+body.dark-mode .cb-header-logo svg{stroke:#fff}
+body.dark-mode .cb-icon-btn{background:rgba(255,255,255,0.06)}
+body.dark-mode .cb-icon-btn:hover{background:rgba(255,255,255,0.12)}
+body.dark-mode .cb-icon-btn svg{stroke:#999}
+body.dark-mode .cb-icon-btn.active{background:#fff}
+body.dark-mode .cb-icon-btn.active svg{stroke:#000}
+body.dark-mode .cb-close{background:rgba(255,255,255,0.06)}
+body.dark-mode .cb-close:hover{background:rgba(255,255,255,0.12)}
+body.dark-mode .cb-close svg{stroke:#888}
+body.dark-mode .msg-text{color:#ddd}
+body.dark-mode .msg-role{color:#666}
+body.dark-mode .msg.msg-right .msg-text{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.06)}
+body.dark-mode .msg:not(.msg-right) .msg-text{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.06)}
+body.dark-mode .msg-ava.ai{background:rgba(255,255,255,0.1)}
+body.dark-mode .msg-ava.user{background:rgba(255,255,255,0.06)}
+body.dark-mode .msg-ava.user svg{stroke:#999}
+body.dark-mode .msg-action-btn{background:rgba(255,255,255,0.04)}
+body.dark-mode .msg-action-btn:hover{background:rgba(255,255,255,0.08)}
+body.dark-mode .msg-action-btn svg{stroke:#666}
+body.dark-mode .cb-welcome-t{color:#eee}
+body.dark-mode .cb-welcome-s{color:#666}
+body.dark-mode .cb-chip{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08);color:#aaa}
+body.dark-mode .cb-chip:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.15)}
+body.dark-mode .cb-input{border-top-color:rgba(255,255,255,0.04)}
+body.dark-mode .cb-input-row{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.06)}
+body.dark-mode .cb-input-row:focus-within{border-color:rgba(255,255,255,0.15);background:rgba(255,255,255,0.08)}
+body.dark-mode .cb-ta{color:#eee}
+body.dark-mode .cb-ta::placeholder{color:#555}
+body.dark-mode .cb-send{background:#fff}
+body.dark-mode .cb-send svg{stroke:#000}
+body.dark-mode .cb-attach{background:rgba(255,255,255,0.04)}
+body.dark-mode .cb-attach:hover{background:rgba(255,255,255,0.08)}
+body.dark-mode .cb-attach svg{stroke:#888}
+body.dark-mode .cb-model{color:#888;background:rgba(255,255,255,0.06)}
+body.dark-mode .cb-model:hover{background:rgba(255,255,255,0.1);color:#bbb}
+body.dark-mode .cb-ph{color:#555}
+body.dark-mode .cb-caret{background:#666}
+body.dark-mode .cb-overlay-panel{background:rgba(10,10,10,0.94);backdrop-filter:blur(60px)}
+body.dark-mode .cbp-title{color:#ddd}
+body.dark-mode .cbp-profile-sub{color:#666}
+body.dark-mode .cbh-item{background:rgba(255,255,255,0.04)}
+body.dark-mode .cbh-item:hover{background:rgba(255,255,255,0.08)}
+body.dark-mode .cbh-item-preview{color:#ccc}
+body.dark-mode .cbh-item-date{color:#555}
+body.dark-mode .cbh-empty{color:#555}
+body.dark-mode .cbp-tag{background:rgba(255,255,255,0.06);color:#aaa;border-color:rgba(255,255,255,0.08)}
+body.dark-mode .cbp-tag.new{background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.15)}
+body.dark-mode .cbp-section{background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.06)}
+body.dark-mode .cbp-section-title{color:#666}
+body.dark-mode .cbp-section-value{color:#ccc}
+body.dark-mode .cbp-prompt-wrap{background:rgba(255,255,255,0.02);border-color:rgba(255,255,255,0.04)}
+body.dark-mode .cbp-prompt{color:#666}
+body.dark-mode .cbp-gallery-empty{color:#555}
+body.dark-mode .cb-file-preview{background:rgba(255,255,255,0.04);color:#aaa}
+body.dark-mode .cb-file-preview-icon{background:rgba(255,255,255,0.06)}
+body.dark-mode .cb-file-preview-icon svg{stroke:#888}
+body.dark-mode #modelMenu{background:#1a1a1a;border-color:rgba(255,255,255,0.08);box-shadow:0 8px 30px rgba(0,0,0,0.4)}
+body.dark-mode .mm-opt{color:#ccc}
+body.dark-mode .mm-opt:hover{background:rgba(255,255,255,0.06)}
+body.dark-mode .mm-opt.active{background:rgba(255,255,255,0.06)}
+body.dark-mode .mm-lock{background:rgba(255,255,255,0.08);color:#666}
+body.dark-mode .modal-overlay.show{animation:modalBgInDark 1s ease forwards}
+@keyframes modalBgInDark{from{background:rgba(0,0,0,0);backdrop-filter:blur(0px)}to{background:rgba(0,0,0,0.5);backdrop-filter:blur(14px)}}
+body.dark-mode .login-modal,.dark-mode .pricing-modal{background:rgba(20,20,20,0.92);box-shadow:0 30px 80px rgba(0,0,0,0.5)}
+body.dark-mode .login-title,.dark-mode .pricing-title{color:#eee}
+body.dark-mode .login-sub,.dark-mode .pricing-sub{color:#666}
+body.dark-mode .login-logo svg{stroke:#fff}
+body.dark-mode .login-logo svg circle{fill:#fff}
+body.dark-mode .btn-google{background:#1a1a1a;border-color:rgba(255,255,255,0.1);color:#ddd}
+body.dark-mode .btn-google:hover{background:#222;border-color:rgba(255,255,255,0.2)}
+body.dark-mode .login-terms{color:#444}
+body.dark-mode .login-terms a{color:#666}
+body.dark-mode .price-card{border-color:rgba(255,255,255,0.06)}
+body.dark-mode .price-card.featured{border-color:#fff}
+body.dark-mode .pc-name{color:#eee}
+body.dark-mode .pc-price{color:#eee}
+body.dark-mode .pc-price span{color:#666}
+body.dark-mode .pc-desc{color:#666}
+body.dark-mode .pc-features li{color:#bbb}
+body.dark-mode .pc-features li::before{color:#fff}
+body.dark-mode .btn-price{border-color:#fff}
+body.dark-mode .btn-price.primary{background:#fff;color:#000}
+body.dark-mode .btn-price.primary:hover{background:#ddd}
+body.dark-mode .btn-price.secondary{border-color:#333;color:#555}
+body.dark-mode .modal-close svg{stroke:#666}
+body.dark-mode .archive-map-title{color:#eee}
+body.dark-mode .archive-map-sub{color:#666}
+body.dark-mode .mypage-title{color:#eee}
+body.dark-mode .mypage-card{background:rgba(30,30,30,0.6);border-color:rgba(255,255,255,0.06)}
+body.dark-mode .mc-value{color:#eee}
+body.dark-mode .mc-sub{color:#666}
+body.dark-mode .sub-badge{background:rgba(255,255,255,0.06);color:#888}
+body.dark-mode .sub-badge.pro{background:#fff;color:#000}
+body.dark-mode .btn-upgrade{background:#fff;color:#000;border-color:#fff}
+body.dark-mode .btn-unmask-start{background:#fff;color:#000;border-color:#fff}
+body.dark-mode .interpret-input{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.08);color:#eee}
+body.dark-mode .interpret-input:focus{border-color:rgba(255,255,255,0.2);background:rgba(255,255,255,0.08)}
+body.dark-mode .interpret-go{background:#fff;color:#000}
+body.dark-mode .ir-field{color:#eee}
+body.dark-mode .ir-badge{color:#888;border-color:rgba(255,255,255,0.1)}
+body.dark-mode .ir-card{background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.06)}
+body.dark-mode .ir-card-title{color:#888}
+body.dark-mode .ir-card-body{color:#ddd}
+body.dark-mode .ir-insight{background:rgba(255,255,255,0.02);border-color:rgba(255,255,255,0.06)}
+
+/* ============ THEME TOGGLE ============ */
+.btn-theme{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid rgba(0,0,0,0.08);border-radius:8px;background:transparent;cursor:pointer;transition:0.2s;flex-shrink:0}
+.btn-theme:hover{border-color:rgba(0,0,0,0.2);background:rgba(0,0,0,0.02)}
+.btn-theme:active{transform:scale(0.92);transition:0.06s}
+.btn-theme svg{width:15px;height:15px;stroke:#555;fill:none;stroke-width:1.5;transition:0.3s}
+body.dark-mode .btn-theme{border-color:rgba(255,255,255,0.1)}
+body.dark-mode .btn-theme:hover{border-color:rgba(255,255,255,0.2);background:rgba(255,255,255,0.04)}
+body.dark-mode .btn-theme svg{stroke:#999}
+.btn-theme .icon-moon{display:block}
+.btn-theme .icon-sun{display:none}
+body.dark-mode .btn-theme .icon-moon{display:none}
+body.dark-mode .btn-theme .icon-sun{display:block}
+
+/* ============ LANGUAGE SELECTOR ============ */
+.lang-sel{position:relative;display:flex;align-items:center}
+.lang-btn{display:flex;align-items:center;gap:5px;padding:0 12px;height:34px;border:1px solid rgba(0,0,0,0.08);border-radius:8px;background:transparent;font-size:11px;font-weight:500;color:#666;cursor:pointer;transition:0.2s;font-family:inherit;letter-spacing:0.04em;box-sizing:border-box}
+.lang-btn:hover{border-color:rgba(0,0,0,0.2);background:rgba(0,0,0,0.02)}
+.lang-btn:active{transform:scale(0.94);transition:0.06s}
+.lang-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.5}
+body.dark-mode .lang-btn{color:#999;border-color:rgba(255,255,255,0.1)}
+body.dark-mode .lang-btn:hover{border-color:rgba(255,255,255,0.2);background:rgba(255,255,255,0.04)}
+.lang-dropdown{display:none;position:absolute;top:42px;right:0;background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:4px;min-width:130px;box-shadow:0 8px 30px rgba(0,0,0,0.12);z-index:9999}
+.lang-dropdown.show{display:block}
+body.dark-mode .lang-dropdown{background:#1a1a1a;border-color:rgba(255,255,255,0.08);box-shadow:0 8px 30px rgba(0,0,0,0.4)}
+.lang-opt{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;font-size:12px;color:#333;border:none;background:none;cursor:pointer;border-radius:6px;transition:0.15s;font-family:inherit;text-align:left}
+.lang-opt:hover{background:rgba(0,0,0,0.04)}
+.lang-opt.active{font-weight:600;background:rgba(0,0,0,0.04)}
+body.dark-mode .lang-opt{color:#ccc}
+body.dark-mode .lang-opt:hover{background:rgba(255,255,255,0.06)}
+body.dark-mode .lang-opt.active{background:rgba(255,255,255,0.06)}
+
+/* ============ FILE ATTACH PREVIEW ============ */
+.cb-attach-preview{display:flex;align-items:center;gap:8px;padding:6px 10px;margin-bottom:6px;background:rgba(0,0,0,0.03);border-radius:8px;font-size:12px;color:#555;animation:msgIn 0.3s ease}
+body.dark-mode .cb-attach-preview{background:rgba(255,255,255,0.04);color:#aaa}
+.cb-attach-preview-icon{width:24px;height:24px;border-radius:6px;background:rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+body.dark-mode .cb-attach-preview-icon{background:rgba(255,255,255,0.06)}
+.cb-attach-preview-icon svg{width:12px;height:12px;stroke:#666;fill:none;stroke-width:1.5}
+body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
+.cb-attach-preview-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cb-attach-preview-img{width:40px;height:40px;border-radius:6px;object-fit:cover;flex-shrink:0}
+.cb-attach-preview-remove{width:20px;height:20px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0.4;transition:0.15s}
+.cb-attach-preview-remove:hover{opacity:1}
+.cb-attach-preview-remove svg{width:10px;height:10px;stroke:#999;fill:none;stroke-width:2}
+
+</style>
+</head>
+<body>
+<div class="cursor-dot"></div>
+<div class="cursor-ring"></div>
+<nav>
+  <div class="logo" id="logoBtn"><svg viewBox="0 0 24 24"><path d="M 5 19 A 10 10 0 1 1 19 19" fill="none" stroke-linecap="round"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/></svg>Aletheia</div>
+  <ul class="nav-center">
+    <li data-page="about" class="active">ABOUT</li>
+    <li data-page="unmask">UNMASK</li>
+    <li data-page="interpret">INTERPRET</li>
+    <li data-page="archive">ARCHIVE</li>
+  </ul>
+  <div class="nav-auth">
+    <div class="lang-sel" id="langSel">
+      <button class="lang-btn" id="langBtn"><span id="langCurrent">KO</span><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <div class="lang-dropdown" id="langDropdown">
+        <button class="lang-opt active" data-lang="ko">한국어</button>
+        <button class="lang-opt" data-lang="en">English</button>
+        <button class="lang-opt" data-lang="es">Español</button>
+      </div>
+    </div>
+    <button class="btn-theme" id="btnTheme" title="테마 변경">
+      <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+    <button class="btn-signin" id="btnSignIn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></svg><span data-i18n="signIn">Sign in</span></button>
+    <div class="nav-profile" id="navProfile">
+      <div class="nav-profile-btn" id="navProfileBtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></svg><span class="nav-name" id="navName">User</span></div>
+      <div class="profile-dropdown" id="profileDropdown">
+        <button class="pd-item" id="btnMyPage" data-i18n="myPage">My Page</button>
+        <button class="pd-item" id="btnSignOut" data-i18n="signOut">Sign out</button>
+      </div>
+    </div>
+  </div>
+  <button class="nav-hamburger" id="navHamburger"><span></span><span></span><span></span></button>
+</nav>
+<div class="nav-mobile-menu" id="navMobileMenu">
+  <li data-page="about">ABOUT</li>
+  <li data-page="unmask">UNMASK</li>
+  <li data-page="interpret">INTERPRET</li>
+  <li data-page="archive">ARCHIVE</li>
+  <li id="mobileSignIn">SIGN IN</li>
+</div>
+<div id="canvas-container"></div>
+
+<!-- ABOUT -->
+<div class="page active" id="page-about">
+  <div class="hero-top">
+    <div class="hero-landing">
+      <div class="hl-logo" id="hlLogo">Aletheia</div>
+      <div class="hl-bottom">
+        <div class="hl-typing" id="hlTyping"></div>
+        <div class="hl-buttons" id="hlButtons">
+          <button class="hl-btn" onclick="goPage('unmask')">UNMASK</button>
+          <button class="hl-btn" onclick="goPage('interpret')">INTERPRET</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="container">
+    <section id="sec-philosophy"><span class="label typing-target" data-text="Our Core"></span><div class="phi-text reveal reveal-d1">"당신의 이야기에서 본질을 추출하고, 그것을 물성으로 치환합니다."</div><div class="phi-desc reveal reveal-d2">우리는 외부에서 유행하는 아이템을 가져오는 것이 아니라, 당신 내면의 원초적인 경험과 성질을 추출하여 세상에 단 하나뿐인 비즈니스의 물성으로 치환합니다. 대화할수록 데이터가 쌓이고, 그 데이터가 당신의 본질이 됩니다.</div></section>
+
+    <!-- ===== DEMO SECTIONS ===== -->
+    <section id="sec-demo1" class="demo-section">
+      <div class="demo-layout">
+        <div class="demo-text reveal">
+          <span class="demo-num">/STEP 01</span>
+          <h2 class="demo-title">당신은 자신을 얼마나 알고 있나요?</h2>
+          <p class="demo-desc">Aletheia는 답을 주지 않습니다.<br>대화를 통해 당신 안에 이미 있지만 아직 드러나지 않은 것들을 발견합니다.</p>
+          <p class="demo-sub">가치관, 반복 패턴, 회피 성향, 잠재 동기, 감정의 온도.</p>
+        </div>
+        <div class="demo-visual reveal reveal-d2">
+          <div class="demo-chat-mock">
+            <div class="dcm-header"><span class="dcm-dot"></span><span class="dcm-title">Aletheia Core</span></div>
+            <div class="dcm-messages" id="demo-chat-1">
+              <div class="dcm-msg dcm-ai"><span class="dcm-label">ALETHEIA</span><div class="dcm-bubble" data-demo="요즘 어떤 생각에 빠져 있어요?"></div></div>
+              <div class="dcm-msg dcm-user"><span class="dcm-label">YOU</span><div class="dcm-bubble" data-demo="카페를 열고 싶은데... 뭔가 확신이 없어요."></div></div>
+              <div class="dcm-msg dcm-ai"><span class="dcm-label">ALETHEIA</span><div class="dcm-bubble" data-demo="카페라는 형태를 걷어내면, 진짜 하고 싶은 건 뭘까요?"></div></div>
+              <div class="dcm-msg dcm-user"><span class="dcm-label">YOU</span><div class="dcm-bubble" data-demo="...공간? 내 이야기가 담긴 공간을 만들고 싶은 것 같아요."></div></div>
+              <div class="dcm-msg dcm-ai"><span class="dcm-label">ALETHEIA</span><div class="dcm-bubble" data-demo="'공간'이라는 단어를 두 번 썼어요. 거기에 뭔가 있는 것 같아요."></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-demo2" class="demo-section">
+      <div class="demo-layout demo-layout-reverse">
+        <div class="demo-visual reveal">
+          <div class="demo-profile-mock">
+            <div class="dpm-header"><span class="dpm-title">Essence Snapshot</span><span class="dpm-ver">v1.0</span></div>
+            <div class="dpm-body">
+              <div class="dpm-tag-area" id="demo-tags">
+                <span class="dpm-tag" data-delay="0">공간감각</span>
+                <span class="dpm-tag" data-delay="200">독립지향</span>
+                <span class="dpm-tag" data-delay="400">경험기반</span>
+                <span class="dpm-tag" data-delay="600">자기탐색</span>
+                <span class="dpm-tag" data-delay="800">본질추구</span>
+              </div>
+              <div class="dpm-section">
+                <span class="dpm-label">핵심 가치</span>
+                <p class="dpm-value" id="demo-value">표면을 뚫고 구조를 보려는 사람</p>
+              </div>
+              <div class="dpm-section">
+                <span class="dpm-label">에너지 지도</span>
+                <div class="dpm-energy">
+                  <span class="dpm-energy-high">↑ 자기 철학을 만들 때</span>
+                  <span class="dpm-energy-low">↓ 남의 기준에 맞출 때</span>
+                </div>
+              </div>
+              <div class="dpm-section">
+                <span class="dpm-label">서사</span>
+                <p class="dpm-narrative" id="demo-narrative">가짜를 참지 못하는 사람이 진짜를 찾아 헤매다, 자기만의 도구를 만들기 시작했다.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="demo-text reveal reveal-d2">
+          <span class="demo-num">/STEP 02</span>
+          <h2 class="demo-title">AI가 답을 주지 않습니다.<br>거울이 됩니다.</h2>
+          <p class="demo-desc">대화가 쌓일수록 당신의 프로필이 형성됩니다. 태그가 아니라 서사로. 진단이 아니라 발견으로.</p>
+          <p class="demo-sub">Essence Document는 확정이 아니라 현재 버전의 스냅샷입니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-demo3" class="demo-section">
+      <div class="demo-layout">
+        <div class="demo-text reveal">
+          <span class="demo-num">/STEP 03</span>
+          <h2 class="demo-title">자기를 아는 사람은<br>AI를 도구로 쓴다.</h2>
+          <p class="demo-desc">자기를 모르는 사람은 AI의 도구가 된다.<br><br>Aletheia는 AI 과의존을 만들지 않습니다.<br>AI 없이도 자기 기준이 있는 사람을 만드는 것이 목표입니다.</p>
+          <p class="demo-sub">알고리즘이 추천하는 '나'가 아니라, 진짜 '나'를 기준으로.</p>
+        </div>
+        <div class="demo-visual reveal reveal-d2">
+          <div class="demo-essence-flow">
+            <div class="def-step def-step-1"><span class="def-icon">01</span><span class="def-label">대화</span></div>
+            <div class="def-arrow">—</div>
+            <div class="def-step def-step-2"><span class="def-icon">02</span><span class="def-label">추출</span></div>
+            <div class="def-arrow">—</div>
+            <div class="def-step def-step-3"><span class="def-icon">03</span><span class="def-label">Essence</span></div>
+            <div class="def-arrow">—</div>
+            <div class="def-step def-step-4"><span class="def-icon">04</span><span class="def-label">나침반</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- ===== END DEMO SECTIONS ===== -->
+    <section id="sec-method"><span class="label typing-target" data-text="The Method"></span><div class="method-list">
+      <div class="method-row reveal reveal-d1"><div class="method-left"><span class="m-num">/0.1</span><p class="m-desc"><strong>Unmask</strong><br>대화를 통해 당신의 패턴, 가치관, 잠재 동기를 추출하고<br>하나의 프로필로 합성합니다.</p><button class="m-btn" onclick="goPage('unmask')">Start Unmask →</button></div><div class="method-right"><div class="big-typo">UNMASK</div></div></div>
+      <div class="method-row reveal reveal-d2"><div class="method-left"><span class="m-num">/0.2</span><p class="m-desc"><strong>Interpret</strong><br>산업의 본질과 당신의 본질이 만나는 교차점을 찾습니다.</p><button class="m-btn" onclick="goPage('interpret')">Start Interpret →</button></div><div class="method-right"><div class="big-typo">INTERPRET</div></div></div>
+    </div></section>
+    <footer><div>© 2026 Aletheia</div><div>Less but Better</div></footer>
+  </div>
+</div>
+
+<!-- CORE -->
+<div class="page" id="page-unmask">
+  <div class="svc-page">
+    <div class="svc-intro"><div class="svc-intro-num svc-anim" data-delay="0">/0.1</div><h2 class="svc-intro-title svc-anim" data-delay="100">당신을 발견하세요.</h2><p class="svc-intro-desc svc-anim" data-delay="200">대화를 시작하면 당신의 윤곽이 드러납니다.<br>가치관, 패턴, 회피하는 것 — 모든 것이 여기에 쌓입니다.</p></div>
+  </div>
+  <!-- v4-style chatbox -->
+  <div class="chatbox-wrap" id="coreWrap">
+    <div class="chatbox" id="coreBox">
+      <div class="cb-body">
+        <div class="cb-header">
+          <div class="cb-header-left">
+            <div class="cb-header-logo"><svg viewBox="0 0 24 24"><path d="M 5 19 A 10 10 0 1 1 19 19" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/></svg></div>
+            <span class="cb-header-name" id="cbHeaderName">Aletheia Core</span>
+          </div>
+          <div class="cb-header-right">
+            <button class="cb-icon-btn" id="cbNewChat" title="새 대화"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            <button class="cb-icon-btn" id="cbBookmarkList" title="북마크"><svg viewBox="0 0 24 24"><path d="M6 4h12a1 1 0 0 1 1 1v16l-7-4-7 4V5a1 1 0 0 1 1-1z"/></svg></button>
+            <button class="cb-icon-btn" id="cbGalleryBtn" title="갤러리"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></button>
+            <button class="cb-icon-btn" id="cbProfileBtn" title="Unmask"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg><span class="unmask-badge" id="umBadge">0</span></button>
+            <button class="cb-icon-btn" id="cbHistoryBtn" title="이전 대화"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+            <button class="cb-close" id="cbClose"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+          </div>
+        </div>
+        <!-- History Panel -->
+        <div class="cb-overlay-panel" id="cbHistoryPanel">
+          <div class="cbp-title">이전 대화</div>
+          <div class="cbp-list" id="cbHistoryList"></div>
+        </div>
+        <!-- Bookmark Panel -->
+        <div class="cb-overlay-panel" id="cbBookmarkPanel">
+          <div class="cbp-title">저장된 메시지</div>
+          <div class="cbp-list" id="cbBookmarkListContent"></div>
+        </div>
+        <!-- Gallery Panel -->
+        <div class="cb-overlay-panel" id="cbGalleryPanel">
+          <div class="cbp-title">갤러리</div>
+          <div class="cbp-gallery" id="cbGalleryGrid"></div>
+        </div>
+        <!-- Profile Panel -->
+        <div class="cb-overlay-panel" id="cbProfilePanel">
+          <div class="cbp-title">UNMASK</div>
+          <div class="cbp-profile-sub">대화할수록 당신의 윤곽이 드러납니다.</div>
+          <div class="um-status" id="umStatus"><span class="um-status-dot" id="umStatusDot2"></span><span id="umStatusText2">대기 중</span></div>
+          <div class="um-depth-wrap">
+            <div class="um-depth-label"><span class="um-depth-title">대화 깊이</span><span class="um-depth-count" id="umDepthCount">0회</span></div>
+            <div class="um-depth-bar"><div class="um-depth-fill" id="umDepthFill"></div></div>
+            <div class="um-depth-stages" id="umStages">
+              <span class="um-stage active" data-stage="0">표면</span>
+              <span class="um-stage" data-stage="1">패턴</span>
+              <span class="um-stage" data-stage="2">가치관</span>
+              <span class="um-stage" data-stage="3">동기</span>
+              <span class="um-stage" data-stage="4">Essence</span>
+            </div>
+          </div>
+            <div class="um-depth-bar"><div class="um-depth-fill" id="umDepthFill"></div></div>
+          </div>
+          <div class="cbp-tags" id="cbProfileTags"></div>
+          <div class="cbp-section locked" id="umSecValues">
+            <div class="cbp-section-title">핵심 가치관</div>
+            <div class="cbp-section-value" id="profileValues">대화가 더 필요합니다...</div>
+          </div>
+          <div class="cbp-section locked" id="umSecAvoid">
+            <div class="cbp-section-title">회피 패턴</div>
+            <div class="cbp-section-value" id="profileAvoid">대화가 더 필요합니다...</div>
+          </div>
+          <div class="cbp-section locked" id="umSecMotiv">
+            <div class="cbp-section-title">잠재 동기</div>
+            <div class="cbp-section-value" id="profileMotiv">대화가 더 필요합니다...</div>
+          </div>
+          <!-- Essence Prompts (blur paywall) -->
+          <div class="essence-prompts" id="essencePrompts" style="display:none">
+            <div class="ep-header">
+              <span class="ep-title"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>AI PROMPTS</span>
+              <span class="ep-badge">GENERATED</span>
+            </div>
+            <div class="ep-list" id="epList">
+              <div class="ep-item preview">나는 표면보다 구조를 보는 사람입니다.</div>
+              <div class="ep-item locked">추상적 조언보다 구체적 사례와 경험으로 설명해주세요.</div>
+              <div class="ep-item locked">완벽보다 진짜를 추구합니다. 솔직하게 대화해주세요.</div>
+              <div class="ep-item locked">권위보다 논리로 설득해주세요.</div>
+            </div>
+            <button class="ep-unlock" id="epUnlock"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>전체 프롬프트 보기 — 구독 또는 크레딧</button>
+          </div>
+          <!-- Essence Document Generation -->
+          <div class="essence-doc-gen" id="essenceDocGen" style="display:none">
+            <button class="ed-btn" id="edGenBtn"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Essence Document 생성</button>
+            <p class="ed-desc">대화에서 추출된 본질을 문서로 정리합니다.<br>ChatGPT, Gemini 등에 바로 붙여넣기 가능.</p>
+          </div>
+        </div>
+        <div class="cb-msgs" id="cbMsgs">
+          <div class="cb-welcome" id="cbWelcome"><div class="cb-welcome-t">무엇이 당신을 이끄나요?</div><div class="cb-welcome-s">당신의 이야기에서 본질을 추출합니다.</div><div class="cb-chips"><span class="cb-chip" data-q="나는 카페를 하고 싶어">카페 창업</span><span class="cb-chip" data-q="내가 진짜 좋아하는게 뭔지 모르겠어">자기 탐구</span><span class="cb-chip" data-q="브랜드를 만들고 싶은데 방향을 모르겠어">브랜드 방향</span></div></div>
+        </div>
+        <div class="cb-input">
+          <div class="cb-model-row"><div class="cb-model" id="cbModel"><span class="dot" style="background:#000"></span><span class="model-name">Core</span><svg class="arr" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div></div>
+          <div class="cb-input-row"><button class="cb-attach" id="cbAttach" title="파일 첨부"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button><textarea class="cb-ta" id="cbTa" placeholder="대화를 시작하세요..." rows="1"></textarea><button class="cb-send" id="cbSend"><svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></button></div>
+        </div>
+      </div>
+      <div class="cb-bar" id="cbBar"><span class="cb-ph"><span class="cb-caret"></span>대화를 시작하세요...</span></div>
+    </div>
+  <!-- UNMASK ANALYSIS PANEL -->
+  <div class="unmask-panel" id="unmaskPanel" style="display:none">
+    <div class="um-header">
+      <span class="um-header-title">Unmask</span>
+      <span class="um-header-status"><span class="um-status-dot" id="umStatusDot"></span><span id="umStatusText">대기</span></span>
+    </div>
+    <div class="um-body" id="umBody">
+      <div class="um-empty" id="umEmpty">
+        <div class="um-empty-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg></div>
+        <div class="um-empty-text">대화를 시작하면<br>당신의 본질이 여기에 쌓입니다.</div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- INTERPRET -->
+<div class="page" id="page-interpret">
+  <div class="svc-page"><div class="svc-intro"><div class="svc-intro-num svc-anim" data-delay="0">/0.3</div><h2 class="svc-intro-title svc-anim" data-delay="100">산업의 본질을<br>교차시킵니다.</h2><p class="svc-intro-desc svc-anim" data-delay="200">진입하려는 분야를 입력하세요.<br>그 분야가 진짜로 팔고 있는 것과 당신의 본질이 만나는 지점.</p><div class="interpret-input-wrap svc-anim" data-delay="300"><input class="interpret-input" id="interpretInput" placeholder="예: 스페셜티 커피"/><button class="interpret-go" id="interpretGo">해석 시작</button></div></div>
+  <div class="interpret-result" id="interpretResult" style="display:none">
+    <div class="ir-header"><span class="ir-field" id="irField"></span><span class="ir-badge">INTERPRET ANALYSIS</span></div>
+    <div class="ir-grid">
+      <div class="ir-card"><div class="ir-card-title">표면적 가치</div><div class="ir-card-body" id="irSurface"></div></div>
+      <div class="ir-card"><div class="ir-card-title">본질적 가치</div><div class="ir-card-body" id="irEssence"></div></div>
+      <div class="ir-card"><div class="ir-card-title">숨겨진 욕구</div><div class="ir-card-body" id="irDesire"></div></div>
+      <div class="ir-card"><div class="ir-card-title">교차점</div><div class="ir-card-body" id="irCross"></div></div>
+    </div>
+    <div class="ir-insight"><div class="ir-card-title">핵심 인사이트</div><div class="ir-card-body" id="irInsight"></div></div>
+  </div>
+  </div>
+</div>
+
+<!-- ARCHIVE -->
+<div class="page" id="page-archive">
+  <div class="archive-map">
+    <div class="archive-map-header">
+      <h1 class="archive-map-title">실증의 기록.</h1>
+      <p class="archive-map-sub">Aletheia가 해석한 다양한 분야의 본질 아카이브.</p>
+    </div>
+    <div class="archive-map-canvas" id="archiveMapCanvas">
+      <svg class="map-lines" id="mapLines"></svg>
+      <div class="map-node" style="left:18%;top:32%" data-node="0">
+        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
+        <div class="map-label"><div class="map-label-cat">Cafe & Bakery</div><div class="map-label-name">GYEOL</div></div>
+      </div>
+      <div class="map-node" style="left:45%;top:22%" data-node="1">
+        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
+        <div class="map-label"><div class="map-label-cat">Space Design</div><div class="map-label-name">RAW CONCRETE</div></div>
+      </div>
+      <div class="map-node" style="left:75%;top:28%" data-node="2">
+        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
+        <div class="map-label"><div class="map-label-cat">Fashion</div><div class="map-label-name">STRUCTURE 01</div></div>
+      </div>
+      <div class="map-node" style="left:28%;top:62%" data-node="3">
+        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
+        <div class="map-label"><div class="map-label-cat">Fragrance</div><div class="map-label-name">DEEP SOIL</div></div>
+      </div>
+      <div class="map-node" style="left:55%;top:55%" data-node="4">
+        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
+        <div class="map-label"><div class="map-label-cat">Exhibition</div><div class="map-label-name">THE VOID</div></div>
+      </div>
+      <div class="map-node" style="left:80%;top:65%" data-node="5">
+        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
+        <div class="map-label"><div class="map-label-cat">Architecture</div><div class="map-label-name">MONOLITH</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROJECT DETAIL OVERLAY -->
+<div class="project-detail" id="projectDetail">
+  <div class="project-detail-bg"></div>
+  <button class="project-detail-close" id="pdClose"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <div class="project-detail-inner" id="pdInner"></div>
+</div>
+
+<!-- MY PAGE -->
+<div class="page" id="page-mypage">
+  <div class="mypage-inner"><h1 class="mypage-title">나의 여정.</h1><div class="mypage-grid"><div class="mypage-card"><div class="mc-label">PROFILE</div><div class="mc-value" id="mpName">—</div><div class="mc-sub" id="mpEmail">—</div></div><div class="mypage-card"><div class="mc-label">SUBSCRIPTION</div><span class="sub-badge" id="mpBadge">FREE</span><button class="btn-upgrade" id="btnUpgrade">구독 시작하기</button></div></div></div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="loginOverlay"><div class="login-modal"><div class="login-logo"><svg viewBox="0 0 24 24"><path d="M 5 19 A 10 10 0 1 1 19 19" fill="none" stroke-linecap="round"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/></svg></div><div class="login-title">Aletheia에 오신 것을 환영합니다</div><div class="login-sub">본질을 탐구하는 여정을 시작하세요.</div><button class="btn-google" id="btnGoogle"><svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Google로 계속하기</button><div class="login-terms">로그인 시 <a href="#">이용약관</a> 및 <a href="#">개인정보처리방침</a>에 동의합니다.</div></div></div>
+<div class="modal-overlay" id="pricingOverlay"><div class="pricing-modal"><button class="modal-close" id="pricingClose"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button><div class="pricing-title">당신의 본질에 투자하세요.</div><div class="pricing-sub">Aletheia의 서비스를 선택하세요.</div><div class="pricing-grid"><div class="price-card"><div class="pc-name">Explorer</div><div class="pc-price">₩0 <span>/ 영구</span></div><div class="pc-desc">Aletheia의 철학을 경험하세요.</div><ul class="pc-features"><li data-i18n="priceFeat1">Unmask 기본 대화 (일 10세션)</li><li>Unmask 실시간 프로필</li><li>Archive 열람</li></ul><button class="btn-price secondary" disabled>현재 플랜</button></div><div class="price-card featured"><div class="pc-name">Seeker</div><div class="pc-price">₩29,000 <span>/ 월</span></div><div class="pc-desc">본질을 깊이 탐구하는 풀 서비스.</div><ul class="pc-features"><li>Unmask 무제한 대화</li><li>Unmask 심층 분석</li><li>Interpret 분야 해석</li><li>채팅 기록 저장·열람</li><li>Deep / Interpret 모델 해금</li></ul><button class="btn-price primary" id="btnCheckout">구독 시작 →</button></div></div></div></div>
+<div id="modelMenu"><div class="mm-opt" data-model="Core" data-color="#000" data-tier="free"><span class="md" style="background:#000"></span>Aletheia Core</div><div class="mm-opt" data-model="Deep" data-color="#444" data-tier="seeker"><span class="md" style="background:#444"></span>Aletheia Deep<span class="mm-lock">PRO</span></div><div class="mm-opt" data-model="Interpret" data-color="#666" data-tier="seeker"><span class="md" style="background:#666"></span>Interpret v1<span class="mm-lock">PRO</span></div></div>
+
+<script>
+(function(){
+'use strict';
+var LOGO='<svg viewBox="0 0 24 24"><path d="M 5 19 A 10 10 0 1 1 19 19" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/></svg>';
+var USVG='<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1"/></svg>';
+var dot=document.querySelector('.cursor-dot'),ring=document.querySelector('.cursor-ring');
+document.addEventListener('mousemove',function(e){dot.style.left=e.clientX+'px';dot.style.top=e.clientY+'px';ring.style.left=e.clientX+'px';ring.style.top=e.clientY+'px'});
+document.addEventListener('mousedown',function(){document.body.classList.add('clicking')});
+document.addEventListener('mouseup',function(){document.body.classList.remove('clicking')});
+document.querySelectorAll('button,a,input,textarea,.map-node,.logo,.method-row,.cb-chip,.m-btn,.cb-bar').forEach(function(el){el.addEventListener('mouseenter',function(){document.body.classList.add('hovered')});el.addEventListener('mouseleave',function(){document.body.classList.remove('hovered')})});
+
+/* AUTH */
+var MOCK={name:'이민수',email:'minsu@aletheia.kr',plan:'free',avatar:'M'};
+var authUser=null,currentModel='Core',pendingPage=null;
+var MODEL_NAMES={Core:'Aletheia Core',Deep:'Aletheia Deep',Interpret:'Interpret v1'};
+
+/* ============ THEME TOGGLE ============ */
+var isDark=localStorage.getItem('aletheia-theme')==='dark';
+if(isDark)document.body.classList.add('dark-mode');
+document.getElementById('btnTheme').addEventListener('click',function(){
+  document.body.classList.toggle('dark-mode');
+  isDark=document.body.classList.contains('dark-mode');
+  localStorage.setItem('aletheia-theme',isDark?'dark':'light');
+  if(window._alScene){
+    var bg=isDark?0x0a0a0a:0xffffff;
+    window._alScene.scene.background.setHex(bg);
+    window._alScene.scene.fog.color.setHex(bg);
+    window._alScene.pts.material.color.setHex(isDark?0x888888:0x111111);
+    window._alScene.pts.material.map=window._alScene.createPT(isDark);
+    window._alScene.pts.material.needsUpdate=true;
+    window._alScene.c1.material.color.setHex(isDark?0xffffff:0x000000);
+    window._alScene.c2.material.color.setHex(isDark?0xaaaaaa:0x555555);
+  }
+});
+
+/* ============ i18n ============ */
+var currentLang=localStorage.getItem('aletheia-lang')||'ko';
+var I18N={
+  ko:{
+    signIn:'Sign in',myPage:'My Page',signOut:'Sign out',
+    heroTyping:'당신의 이야기가 가장 강력한 물성이 될 때.',
+    aboutLabel1:'Our Core',aboutLabel2:'The Method',
+    phiText:'"당신의 이야기에서 본질을 추출하고, 그것을 물성으로 치환합니다."',
+    phiDesc:'우리는 외부에서 유행하는 아이템을 가져오는 것이 아니라, 당신 내면의 원초적인 경험과 성질을 추출하여 세상에 단 하나뿐인 비즈니스의 물성으로 치환합니다. 대화할수록 데이터가 쌓이고, 그 데이터가 당신의 본질이 됩니다.',
+    m1Desc:'<strong>Unmask</strong><br>대화를 통해 당신의 패턴, 가치관, 잠재 동기를 추출하고 하나의 프로필로 합성합니다.',
+    m2Desc:'<strong>Interpret</strong><br>산업의 본질과 당신의 본질이 만나는 교차점을 찾습니다.',
+    m3Desc:'<strong>Interpret</strong><br>산업의 본질과 당신의 본질이 만나는 교차점을 찾습니다.',
+    m1Btn:'Start Dialogue →',m2Btn:'View Profile →',m3Btn:'Start Interpret →',
+    unmaskTitle:'당신을 발견하세요.',unmaskDesc:'대화를 시작하면 당신의 윤곽이 드러납니다.<br>가치관, 패턴, 회피하는 것 — 모든 것이 여기에 쌓입니다.',
+    unmaskTitle:'당신보다<br>당신을 잘 아는 지도.',unmaskDesc:'Core에서 추출된 데이터 — 가치관, 패턴, 회피하는 것.<br>이 모든 것이 하나의 프로필로 합성됩니다.',unmaskBtn:'Core에서 대화 시작하기',
+    interpTitle:'분야의 본질을 해석합니다.',interpDesc:'브랜드, 산업, 외부 대상의 숨겨진 본질을 드러냅니다.',interpPh:'분야 또는 브랜드를 입력하세요',interpGo:'해석 시작',
+    archTitle:'실증의 기록.',archSub:'Aletheia가 해석한 다양한 분야의 본질 아카이브.',
+    welcomeT:'무엇이 당신을 이끄나요?',welcomeS:'당신의 이야기에서 본질을 추출합니다.',
+    chatPh:'대화를 시작하세요...',
+    chip1:'카페 창업',chip2:'자기 탐구',chip3:'브랜드 방향',
+    chipQ1:'나는 카페를 하고 싶어',chipQ2:'내가 진짜 좋아하는게 뭔지 모르겠어',chipQ3:'브랜드를 만들고 싶은데 방향을 모르겠어',
+    histTitle:'이전 대화',bmTitle:'저장된 메시지',galTitle:'갤러리',profTitle:'실시간 프로필',
+    profSub:'대화를 통해 실시간으로 추출되는 당신의 프로필입니다.',
+    profVal:'핵심 가치관',profAvoid:'회피 패턴',profMotiv:'잠재 동기',profPrompt:'현재 시스템 프롬프트',
+    profEmpty:'대화가 더 필요합니다...',
+    myTitle:'나의 여정.',
+    pricingTitle:'당신의 본질에 투자하세요.',pricingSub:'Aletheia의 서비스를 선택하세요.',
+    loginTitle:'Aletheia에 오신 것을 환영합니다',loginSub:'본질을 탐구하는 여정을 시작하세요.',
+    loginGoogle:'Google로 계속하기',loginTerms:'로그인 시 <a href="#">이용약관</a> 및 <a href="#">개인정보처리방침</a>에 동의합니다.',
+    explorerName:'Explorer',seekerName:'Seeker',
+    explorerPrice:'₩0',explorerUnit:'/ 영구',explorerDesc:'Aletheia의 철학을 경험하세요.',
+    seekerPrice:'₩29,000',seekerUnit:'/ 월',seekerDesc:'본질을 깊이 탐구하는 풀 서비스.',
+    priceFeat1:'Unmask 기본 대화 (일 10세션)',priceFeat2:'Unmask 실시간 프로필',priceFeat3:'Archive 열람',
+    priceFeat4:'Unmask 무제한 대화',priceFeat5:'Unmask 심층 분석',priceFeat6:'Interpret 분야 해석',priceFeat7:'채팅 기록 저장·열람',priceFeat8:'Deep / Interpret 모델 해금',
+    currentPlan:'현재 플랜',startSub:'구독 시작 →',upgrade:'구독 시작하기',
+    newChat:'새 대화',bookmark:'북마크',gallery:'갤러리',profile:'Unmask',history:'이전 대화',
+    footer:'Less but Better'
+  },
+  en:{
+    signIn:'Sign in',myPage:'My Page',signOut:'Sign out',
+    heroTyping:'When your story becomes the most powerful material.',
+    aboutLabel1:'Our Core',aboutLabel2:'The Method',
+    phiText:'"We extract the essence from your story and transform it into material."',
+    phiDesc:'We don\'t borrow trending ideas from the outside. We extract the primal experiences and qualities from within you, and transform them into the unique material of your business. The more you talk, the more data accumulates — and that data becomes your essence.',
+    m1Desc:'<strong>Unmask</strong><br>Extracts your patterns, values, and latent motivations through dialogue, synthesized into one profile.',
+    m2Desc:'<strong>Interpret</strong><br>Finds the intersection of an industry\'s essence and your own.',
+    m3Desc:'<strong>Interpret</strong><br>Finds the intersection where industry essence meets your essence.',
+    m1Btn:'Start Dialogue →',m2Btn:'View Profile →',m3Btn:'Start Interpret →',
+    unmaskTitle:'Discover yourself.',unmaskDesc:'Start a conversation and your contours will emerge.<br>Values, patterns, avoidance — everything accumulates here.',
+    unmaskTitle:'A map that knows you<br>better than you.',unmaskDesc:'Data extracted from Core — values, patterns, avoidance.<br>All synthesized into a single profile.',unmaskBtn:'Start dialogue in Core',
+    interpTitle:'Interpreting the essence of fields.',interpDesc:'Revealing the hidden essence of brands, industries, and external subjects.',interpPh:'Enter a field or brand',interpGo:'Start Interpret',
+    archTitle:'Record of Proof.',archSub:'An archive of essences interpreted by Aletheia across various fields.',
+    welcomeT:'What drives you?',welcomeS:'We extract the essence from your story.',
+    chatPh:'Start a conversation...',
+    chip1:'Café startup',chip2:'Self-discovery',chip3:'Brand direction',
+    chipQ1:'I want to open a café',chipQ2:'I don\'t know what I truly like',chipQ3:'I want to build a brand but don\'t know the direction',
+    histTitle:'Previous chats',bmTitle:'Saved messages',galTitle:'Gallery',profTitle:'Live profile',
+    profSub:'Your profile, extracted in real-time through conversation.',
+    profVal:'Core values',profAvoid:'Avoidance patterns',profMotiv:'Latent motivations',profPrompt:'Current system prompt',
+    profEmpty:'Start a conversation to begin extraction...',
+    myTitle:'My journey.',
+    pricingTitle:'Invest in your essence.',pricingSub:'Choose your Aletheia plan.',
+    loginTitle:'Welcome to Aletheia',loginSub:'Begin your journey of essence discovery.',
+    loginGoogle:'Continue with Google',loginTerms:'By signing in, you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.',
+    explorerName:'Explorer',seekerName:'Seeker',
+    explorerPrice:'$0',explorerUnit:'/ forever',explorerDesc:'Experience the philosophy of Aletheia.',
+    seekerPrice:'$29',seekerUnit:'/ month',seekerDesc:'Full service for deep essence exploration.',
+    priceFeat1:'Core basic dialogue (10/day)',priceFeat2:'Unmask basic profile',priceFeat3:'Archive access',
+    priceFeat4:'Core unlimited dialogue',priceFeat5:'Unmask deep profile',priceFeat6:'Interpret field analysis',priceFeat7:'Chat history save & view',priceFeat8:'Deep / Interpret model unlock',
+    currentPlan:'Current plan',startSub:'Start subscription →',upgrade:'Start subscription',
+    newChat:'New chat',bookmark:'Bookmark',gallery:'Gallery',profile:'Unmask',history:'Previous chats',
+    footer:'Less but Better'
+  },
+  es:{
+    signIn:'Iniciar sesión',myPage:'Mi Página',signOut:'Cerrar sesión',
+    heroTyping:'Cuando tu historia se convierte en la materia más poderosa.',
+    aboutLabel1:'Nuestro Núcleo',aboutLabel2:'El Método',
+    phiText:'"Extraemos la esencia de tu historia y la transformamos en materia."',
+    phiDesc:'No tomamos ideas de moda del exterior. Extraemos las experiencias y cualidades primordiales de tu interior, y las transformamos en la materia única de tu negocio. Cuanto más hablas, más datos se acumulan — y esos datos se convierten en tu esencia.',
+    m1Desc:'<strong>Unmask</strong><br>Extrae tus patrones, valores y motivaciones latentes a través del diálogo, sintetizados en un perfil.',
+    m2Desc:'<strong>Interpret</strong><br>Encuentra la intersección entre la esencia de una industria y la tuya.',
+    m3Desc:'<strong>Interpret</strong><br>Encuentra la intersección donde la esencia de la industria se encuentra con tu esencia.',
+    m1Btn:'Iniciar Diálogo →',m2Btn:'Ver Perfil →',m3Btn:'Iniciar Interpret →',
+    unmaskTitle:'Descúbrete.',unmaskDesc:'Inicia una conversación y tus contornos emergerán.<br>Valores, patrones, evasión — todo se acumula aquí.',
+    unmaskTitle:'Un mapa que te conoce<br>mejor que tú.',unmaskDesc:'Datos extraídos de Core — valores, patrones, evasión.<br>Todo sintetizado en un solo perfil.',unmaskBtn:'Iniciar diálogo en Core',
+    interpTitle:'Interpretando la esencia de los campos.',interpDesc:'Revelando la esencia oculta de marcas, industrias y sujetos externos.',interpPh:'Ingresa un campo o marca',interpGo:'Iniciar Interpret',
+    archTitle:'Registro de Prueba.',archSub:'Un archivo de esencias interpretadas por Aletheia en diversos campos.',
+    welcomeT:'¿Qué te impulsa?',welcomeS:'Extraemos la esencia de tu historia.',
+    chatPh:'Inicia una conversación...',
+    chip1:'Abrir cafetería',chip2:'Autodescubrimiento',chip3:'Dirección de marca',
+    chipQ1:'Quiero abrir una cafetería',chipQ2:'No sé qué me gusta realmente',chipQ3:'Quiero crear una marca pero no sé la dirección',
+    histTitle:'Chats anteriores',bmTitle:'Mensajes guardados',galTitle:'Galería',profTitle:'Perfil en vivo',
+    profSub:'Tu perfil, extraído en tiempo real a través de la conversación.',
+    profVal:'Valores fundamentales',profAvoid:'Patrones de evasión',profMotiv:'Motivaciones latentes',profPrompt:'Prompt del sistema actual',
+    profEmpty:'Inicia una conversación para comenzar la extracción...',
+    myTitle:'Mi viaje.',
+    pricingTitle:'Invierte en tu esencia.',pricingSub:'Elige tu plan de Aletheia.',
+    loginTitle:'Bienvenido a Aletheia',loginSub:'Comienza tu viaje de descubrimiento esencial.',
+    loginGoogle:'Continuar con Google',loginTerms:'Al iniciar sesión, aceptas nuestros <a href="#">Términos</a> y <a href="#">Política de Privacidad</a>.',
+    explorerName:'Explorer',seekerName:'Seeker',
+    explorerPrice:'$0',explorerUnit:'/ siempre',explorerDesc:'Experimenta la filosofía de Aletheia.',
+    seekerPrice:'$29',seekerUnit:'/ mes',seekerDesc:'Servicio completo para exploración profunda de esencia.',
+    priceFeat1:'Diálogo básico Core (10/día)',priceFeat2:'Perfil básico Unmask',priceFeat3:'Acceso al Archivo',
+    priceFeat4:'Diálogo ilimitado Core',priceFeat5:'Perfil profundo Unmask',priceFeat6:'Análisis de campo Interpret',priceFeat7:'Guardar y ver historial de chat',priceFeat8:'Desbloquear modelos Deep / Interpret',
+    currentPlan:'Plan actual',startSub:'Iniciar suscripción →',upgrade:'Iniciar suscripción',
+    newChat:'Nuevo chat',bookmark:'Marcador',gallery:'Galería',profile:'Unmask',history:'Chats anteriores',
+    footer:'Less but Better'
+  }
+};
+
+function t(key){return (I18N[currentLang]&&I18N[currentLang][key])||I18N['ko'][key]||key}
+function applyLang(){
+  /* Nav */
+  document.querySelector('#btnSignIn span').textContent=t('signIn');
+  document.getElementById('btnMyPage').textContent=t('myPage');
+  document.getElementById('btnSignOut').textContent=t('signOut');
+  /* Hero */
+  document.querySelector('.phi-text').innerHTML=t('phiText');
+  document.querySelector('.phi-desc').textContent=t('phiDesc');
+  /* Method */
+  var mDescs=document.querySelectorAll('.m-desc');
+  if(mDescs[0])mDescs[0].innerHTML=t('m1Desc');
+  if(mDescs[1])mDescs[1].innerHTML=t('m2Desc');
+  var mBtns=document.querySelectorAll('.m-btn');
+  if(mBtns[0])mBtns[0].textContent=t('m1Btn');
+  if(mBtns[1])mBtns[1].textContent=t('m2Btn');
+  if(mBtns[2])mBtns[2].textContent=t('m3Btn');
+  /* Service pages */
+  var umT=document.querySelector('#page-unmask .svc-intro-title');if(umT)umT.innerHTML=t('unmaskTitle');
+  var umD=document.querySelector('#page-unmask .svc-intro-desc');if(umD)umD.innerHTML=t('unmaskDesc');
+  /* unmask merged into core */
+  var inT=document.querySelector('#page-interpret .svc-intro-title');if(inT)inT.innerHTML=t('interpTitle');
+  var inD=document.querySelector('#page-interpret .svc-intro-desc');if(inD)inD.innerHTML=t('interpDesc');
+  var inPh=document.getElementById('interpretInput');if(inPh)inPh.placeholder=t('interpPh');
+  var inGo=document.getElementById('interpretGo');if(inGo&&!inGo.disabled)inGo.textContent=t('interpGo');
+  /* Archive */
+  var archT=document.querySelector('.archive-map-title');if(archT)archT.textContent=t('archTitle');
+  var archS=document.querySelector('.archive-map-sub');if(archS)archS.textContent=t('archSub');
+  /* Chat */
+  var wT=document.querySelector('.cb-welcome-t');if(wT)wT.textContent=t('welcomeT');
+  var wS=document.querySelector('.cb-welcome-s');if(wS)wS.textContent=t('welcomeS');
+  var cbTa=document.getElementById('cbTa');if(cbTa)cbTa.placeholder=t('chatPh');
+  var barPh=document.querySelector('.cb-ph');if(barPh){var caret=barPh.querySelector('.cb-caret');barPh.textContent='';if(caret)barPh.appendChild(caret);barPh.appendChild(document.createTextNode(t('chatPh')))}
+  var chips=document.querySelectorAll('.cb-chip');
+  if(chips[0]){chips[0].textContent=t('chip1');chips[0].setAttribute('data-q',t('chipQ1'))}
+  if(chips[1]){chips[1].textContent=t('chip2');chips[1].setAttribute('data-q',t('chipQ2'))}
+  if(chips[2]){chips[2].textContent=t('chip3');chips[2].setAttribute('data-q',t('chipQ3'))}
+  /* Panels */
+  var panels=document.querySelectorAll('.cbp-title');
+  if(panels[0])panels[0].textContent=t('histTitle');
+  if(panels[1])panels[1].textContent=t('bmTitle');
+  if(panels[2])panels[2].textContent=t('galTitle');
+  if(panels[3])panels[3].textContent=t('profTitle');
+  var profSub=document.querySelector('.cbp-profile-sub');if(profSub)profSub.textContent=t('profSub');
+  var secTitles=document.querySelectorAll('.cbp-section-title');
+  if(secTitles[0])secTitles[0].textContent=t('profVal');
+  if(secTitles[1])secTitles[1].textContent=t('profAvoid');
+  if(secTitles[2])secTitles[2].textContent=t('profMotiv');
+  if(secTitles[3])secTitles[3].textContent=t('profPrompt');
+  /* Tooltips */
+  document.getElementById('cbNewChat').title=t('newChat');
+  document.getElementById('cbBookmarkList').title=t('bookmark');
+  document.getElementById('cbGalleryBtn').title=t('gallery');
+  document.getElementById('cbProfileBtn').title=t('profile');
+  document.getElementById('cbHistoryBtn').title=t('history');
+  /* My Page */
+  var myT=document.querySelector('.mypage-title');if(myT)myT.textContent=t('myTitle');
+  var upBtn=document.getElementById('btnUpgrade');if(upBtn)upBtn.textContent=t('upgrade');
+  /* Login */
+  var loginT=document.querySelector('.login-title');if(loginT)loginT.textContent=t('loginTitle');
+  var loginS=document.querySelector('.login-sub');if(loginS)loginS.textContent=t('loginSub');
+  var gBtn=document.getElementById('btnGoogle');if(gBtn){var svg=gBtn.querySelector('svg');gBtn.textContent='';if(svg)gBtn.appendChild(svg);gBtn.appendChild(document.createTextNode(t('loginGoogle')))}
+  var loginTe=document.querySelector('.login-terms');if(loginTe)loginTe.innerHTML=t('loginTerms');
+  /* Pricing */
+  var prT=document.querySelector('.pricing-title');if(prT)prT.textContent=t('pricingTitle');
+  var prS=document.querySelector('.pricing-sub');if(prS)prS.textContent=t('pricingSub');
+  var pcNames=document.querySelectorAll('.pc-name');
+  if(pcNames[0])pcNames[0].textContent=t('explorerName');
+  if(pcNames[1])pcNames[1].textContent=t('seekerName');
+  var pcPrices=document.querySelectorAll('.pc-price');
+  if(pcPrices[0])pcPrices[0].innerHTML=t('explorerPrice')+' <span>'+t('explorerUnit')+'</span>';
+  if(pcPrices[1])pcPrices[1].innerHTML=t('seekerPrice')+' <span>'+t('seekerUnit')+'</span>';
+  var pcDescs=document.querySelectorAll('.pc-desc');
+  if(pcDescs[0])pcDescs[0].textContent=t('explorerDesc');
+  if(pcDescs[1])pcDescs[1].textContent=t('seekerDesc');
+  /* Footer */
+  var footerR=document.querySelector('footer div:last-child');if(footerR)footerR.textContent=t('footer');
+  /* Typing labels */
+  var labels=document.querySelectorAll('.typing-target');
+  if(labels[0])labels[0].setAttribute('data-text',t('aboutLabel1'));
+  if(labels[1])labels[1].setAttribute('data-text',t('aboutLabel2'));
+  /* Hero replay */
+  if(window._heroReplay)window._heroReplay(t('heroTyping'));
+  /* Pricing features */
+  var pcFeats=document.querySelectorAll('.pc-features');
+  if(pcFeats[0]){var lis0=pcFeats[0].querySelectorAll('li');if(lis0[0])lis0[0].textContent=t('priceFeat1');if(lis0[1])lis0[1].textContent=t('priceFeat2');if(lis0[2])lis0[2].textContent=t('priceFeat3')}
+  if(pcFeats[1]){var lis1=pcFeats[1].querySelectorAll('li');if(lis1[0])lis1[0].textContent=t('priceFeat4');if(lis1[1])lis1[1].textContent=t('priceFeat5');if(lis1[2])lis1[2].textContent=t('priceFeat6');if(lis1[3])lis1[3].textContent=t('priceFeat7');if(lis1[4])lis1[4].textContent=t('priceFeat8')}
+  var btnCur=pcFeats[0]?pcFeats[0].parentElement.querySelector('.btn-price'):null;if(btnCur)btnCur.textContent=t('currentPlan');
+  var btnSub=pcFeats[1]?pcFeats[1].parentElement.querySelector('.btn-price'):null;if(btnSub)btnSub.textContent=t('startSub');
+}
+
+/* Language selector */
+var LANG_LABELS={ko:'KO',en:'EN',es:'ES'};
+document.getElementById('langBtn').addEventListener('click',function(e){e.stopPropagation();document.getElementById('langDropdown').classList.toggle('show')});
+document.querySelectorAll('.lang-opt').forEach(function(opt){
+  opt.addEventListener('click',function(e){
+    e.stopPropagation();
+    currentLang=this.getAttribute('data-lang');
+    localStorage.setItem('aletheia-lang',currentLang);
+    document.getElementById('langCurrent').textContent=LANG_LABELS[currentLang];
+    document.querySelectorAll('.lang-opt').forEach(function(o){o.classList.toggle('active',o.getAttribute('data-lang')===currentLang)});
+    document.getElementById('langDropdown').classList.remove('show');
+    applyLang();
+  });
+});
+document.addEventListener('click',function(e){if(!e.target.closest('.lang-sel'))document.getElementById('langDropdown').classList.remove('show')});
+/* Init lang */
+document.getElementById('langCurrent').textContent=LANG_LABELS[currentLang];
+document.querySelectorAll('.lang-opt').forEach(function(o){o.classList.toggle('active',o.getAttribute('data-lang')===currentLang)});
+if(currentLang!=='ko')applyLang();
+function mockSignIn(){authUser=MOCK;updateAuthUI();closeModal('loginOverlay');switchPage(pendingPage||'unmask');pendingPage=null}
+function mockSignOut(){authUser=null;currentModel='Core';updateAuthUI();closeProfileDropdown();switchPage('about')}
+function updateAuthUI(){var btn=document.getElementById('btnSignIn'),prof=document.getElementById('navProfile');if(authUser){btn.style.display='none';prof.classList.add('show');document.getElementById('navName').textContent=authUser.name;document.getElementById('mpName').textContent=authUser.name;document.getElementById('mpEmail').textContent=authUser.email;var badge=document.getElementById('mpBadge');if(authUser.plan==='seeker'){badge.textContent='SEEKER';badge.classList.add('pro')}else{badge.textContent='FREE';badge.classList.remove('pro')}}else{btn.style.display='flex';prof.classList.remove('show')}}
+
+/* PAGES */
+var loginRequired=['unmask','interpret','mypage'];
+function switchPage(page){
+  if(loginRequired.indexOf(page)!==-1&&!authUser){pendingPage=page;openModal('loginOverlay');return}
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  var el=document.getElementById('page-'+page);if(!el)return;el.classList.add('active');
+  document.querySelectorAll('.nav-center li').forEach(function(l){l.classList.toggle('active',l.getAttribute('data-page')===page)});
+  document.getElementById('coreWrap').style.display=(page==='unmask')?'flex':'none';
+  if(page!=='unmask'){collapseChat()}
+  if(page==='about'||page==='archive'){document.body.style.overflow='auto';el.style.overflow='auto'}else{document.body.style.overflow='hidden'}
+  /* 등장 모션 */
+  el.querySelectorAll('.svc-anim').forEach(function(a){a.classList.remove('visible')});
+  setTimeout(function(){
+    el.querySelectorAll('.svc-anim').forEach(function(a){
+      var delay=parseInt(a.getAttribute('data-delay'))||0;
+      setTimeout(function(){a.classList.add('visible')},delay);
+    });
+  },50);
+}
+window.goPage=function(p){switchPage(p)};
+function openModal(id){document.getElementById(id).classList.add('show')}
+function closeModal(id){document.getElementById(id).classList.remove('show')}
+function closeProfileDropdown(){document.getElementById('profileDropdown').classList.remove('show')}
+
+/* EVENTS */
+document.querySelectorAll('.nav-center li').forEach(function(li){li.addEventListener('click',function(){switchPage(li.getAttribute('data-page'))})});
+document.getElementById('logoBtn').addEventListener('click',function(){switchPage('about')});
+document.getElementById('btnSignIn').addEventListener('click',function(){openModal('loginOverlay')});
+document.getElementById('btnGoogle').addEventListener('click',mockSignIn);
+document.getElementById('btnSignOut').addEventListener('click',mockSignOut);
+document.getElementById('btnMyPage').addEventListener('click',function(){closeProfileDropdown();switchPage('mypage')});
+document.getElementById('navProfileBtn').addEventListener('click',function(e){if(e.target.closest('.profile-dropdown'))return;document.getElementById('profileDropdown').classList.toggle('show')});
+document.addEventListener('click',function(e){if(!e.target.closest('.nav-profile'))closeProfileDropdown()});
+document.querySelectorAll('.modal-overlay').forEach(function(ov){ov.addEventListener('click',function(e){if(e.target===ov)closeModal(ov.id)})});
+document.getElementById('pricingClose').addEventListener('click',function(){closeModal('pricingOverlay')});
+document.getElementById('btnUpgrade').addEventListener('click',function(){openModal('pricingOverlay')});
+document.getElementById('btnCheckout').addEventListener('click',function(){if(!authUser){closeModal('pricingOverlay');openModal('loginOverlay');return}authUser.plan='seeker';updateAuthUI();closeModal('pricingOverlay');alert('Seeker 구독이 시작되었습니다!')});
+/* unmask button removed — merged into core */
+
+/* INTERPRET MOCK */
+var INTERPRET_DATA={
+  '스페셜티 커피':{surface:'고급 원두, 산지 정보, 추출 방식의 다양성',essence:'감각적 경험의 큐레이션 — 미각을 통한 세계 인식',desire:'일상에서 특별한 순간을 소유하고 싶은 욕구',cross:'당신의 공간 감각과 장인 정신이 만나는 지점. 커피는 매개체이고, 진짜 팔리는 것은 "나만의 취향을 가진 사람"이라는 정체성.',insight:'스페셜티 커피 시장은 음료를 파는 것이 아니라 "감각적 자아"를 파는 시장입니다. 원두의 차이를 아는 것은 곧 "남들과 다른 나"를 증명하는 행위입니다.'},
+  '패션':{surface:'트렌드, 소재, 실루엣, 시즌 컬렉션',essence:'외면을 통한 내면의 선언 — 입는 것은 곧 존재 방식의 표현',desire:'타인의 시선 속에서 자신의 이상적 자아를 확인받고 싶은 욕구',cross:'당신의 브랜드 감각과 독립 지향성이 교차하는 지점.',insight:'패션은 천을 파는 것이 아니라 "미래의 나"를 파는 시장입니다.'},
+  '인테리어':{surface:'가구 배치, 색감, 조명, 동선 설계',essence:'삶의 철학을 공간에 물리적으로 구현하는 행위',desire:'자신만의 세계를 물리적으로 소유하고 통제하고 싶은 욕구',cross:'당신의 공간 감각과 완벽주의가 만나는 지점.',insight:'인테리어는 예쁜 집을 만드는 것이 아니라 "나는 이렇게 사는 사람이다"를 물리적으로 선언하는 행위입니다.'}
+};
+var INTERPRET_DEFAULT={surface:'분석 중...',essence:'분석 중...',desire:'분석 중...',cross:'분석 중...',insight:'분석 중...'};
+
+var SYSTEM_INTERPRET_ANALYSIS='interpret_analysis';
+
+document.getElementById('interpretGo').addEventListener('click',function(){
+  var input=document.getElementById('interpretInput').value.trim();
+  if(!input)return;
+  var btn=document.getElementById('interpretGo');
+  btn.textContent='분석 중...';btn.disabled=true;
+  
+  document.getElementById('irField').textContent=input;
+  var result=document.getElementById('interpretResult');
+  
+  /* Show with loading state */
+  var fallback=INTERPRET_DATA[input]||null;
+  var loadingData=INTERPRET_DEFAULT;
+  document.getElementById('irSurface').textContent=loadingData.surface;
+  document.getElementById('irEssence').textContent=loadingData.essence;
+  document.getElementById('irDesire').textContent=loadingData.desire;
+  document.getElementById('irCross').textContent=loadingData.cross;
+  document.getElementById('irInsight').textContent=loadingData.insight;
+  result.style.display='block';result.style.animation='none';result.offsetHeight;result.style.animation='msgIn 0.6s ease';
+  
+  /* Build user context */
+  var userContext='분석 대상: '+input+'\n';
+  if(profileData.tags.length>0)userContext+='사용자 태그: '+profileData.tags.join(', ')+'\n';
+  if(profileData.values&&profileData.values!=='대화가 더 필요합니다...')userContext+='사용자 가치관: '+profileData.values+'\n';
+  if(profileData.motiv&&profileData.motiv!=='대화가 더 필요합니다...')userContext+='사용자 동기: '+profileData.motiv+'\n';
+  if(profileData.patterns.length>0)userContext+='발견된 패턴: '+profileData.patterns.join('; ')+'\n';
+  
+  callClaude(SYSTEM_INTERPRET_ANALYSIS,[{role:'user',content:userContext}],800).then(function(resp){
+    try{
+      var clean=resp.replace(/```json|```/g,'').trim();
+      var data=JSON.parse(clean);
+      document.getElementById('irSurface').textContent=data.surface||'—';
+      document.getElementById('irEssence').textContent=data.essence||'—';
+      document.getElementById('irDesire').textContent=data.desire||'—';
+      document.getElementById('irCross').textContent=data.cross||'—';
+      document.getElementById('irInsight').textContent=data.insight||'—';
+    }catch(e){
+      console.log('Interpret parse error:',e);
+      if(fallback){
+        document.getElementById('irSurface').textContent=fallback.surface;
+        document.getElementById('irEssence').textContent=fallback.essence;
+        document.getElementById('irDesire').textContent=fallback.desire;
+        document.getElementById('irCross').textContent=fallback.cross;
+        document.getElementById('irInsight').textContent=fallback.insight;
+      }
+    }
+    btn.textContent='해석 시작';btn.disabled=false;
+  }).catch(function(err){
+    console.log('Interpret API error:',err);
+    if(fallback){
+      document.getElementById('irSurface').textContent=fallback.surface;
+      document.getElementById('irEssence').textContent=fallback.essence;
+      document.getElementById('irDesire').textContent=fallback.desire;
+      document.getElementById('irCross').textContent=fallback.cross;
+      document.getElementById('irInsight').textContent=fallback.insight;
+    }
+    btn.textContent='해석 시작';btn.disabled=false;
+  });
+});
+document.getElementById('interpretInput').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('interpretGo').click()});
+
+
+/* CHATBOX – v4 expand pattern */
+var box=document.getElementById('coreBox'),bar=document.getElementById('cbBar'),closeBtn=document.getElementById('cbClose');
+function expandChat(){
+  box.classList.add('expanded');
+  setTimeout(function(){document.getElementById('cbTa').focus()},300);
+}
+function collapseChat(){
+  box.classList.remove('expanded');
+  closePanels();
+}
+bar.addEventListener('click',function(e){if(e.target.closest('.cb-model'))return;expandChat()});
+closeBtn.addEventListener('click',collapseChat);
+document.getElementById('coreWrap').style.display='none';
+
+/* OVERLAY PANELS */
+var historyPanel=document.getElementById('cbHistoryPanel');
+var profilePanel=document.getElementById('cbProfilePanel');
+var bookmarkPanel=document.getElementById('cbBookmarkPanel');
+var galleryPanel=document.getElementById('cbGalleryPanel');
+var historyBtn=document.getElementById('cbHistoryBtn');
+var profileBtn=document.getElementById('cbProfileBtn');
+var bookmarkListBtn=document.getElementById('cbBookmarkList');
+var galleryBtn=document.getElementById('cbGalleryBtn');
+var allPanels=[historyPanel,profilePanel,bookmarkPanel,galleryPanel];
+var allPanelBtns=[historyBtn,profileBtn,bookmarkListBtn,galleryBtn];
+function closePanels(){allPanels.forEach(function(p){p.classList.remove('show')});allPanelBtns.forEach(function(b){b.classList.remove('active')})}
+function togglePanel(panel,btn,onOpen){
+  var wasOpen=panel.classList.contains('show');closePanels();
+  if(!wasOpen){panel.classList.add('show');btn.classList.add('active');if(onOpen)onOpen()}
+}
+historyBtn.addEventListener('click',function(e){e.stopPropagation();togglePanel(historyPanel,historyBtn,renderHistory)});
+profileBtn.addEventListener('click',function(e){e.stopPropagation();togglePanel(profilePanel,profileBtn)});
+bookmarkListBtn.addEventListener('click',function(e){e.stopPropagation();togglePanel(bookmarkPanel,bookmarkListBtn,renderBookmarks)});
+galleryBtn.addEventListener('click',function(e){e.stopPropagation();togglePanel(galleryPanel,galleryBtn,renderGallery)});
+
+/* NEW CHAT */
+document.getElementById('cbNewChat').addEventListener('click',function(){
+  // 현재 대화 저장
+  saveCurrentSession();
+  closePanels();chatStarted=false;msgCount=0;umMsgCount=0;umExtractCount=0;
+  document.getElementById('cbMsgs').innerHTML='';
+  /* Reset Unmask panel */
+  document.getElementById('cbProfileTags').innerHTML='';
+  document.getElementById('umDepthFill').style.width='0%';
+  document.getElementById('umDepthCount').textContent='0회';
+  document.getElementById('umBadge').classList.remove('show');
+  document.getElementById('umBadge').textContent='0';
+  document.getElementById('umStatusDot2').classList.remove('active');
+  document.getElementById('umStatusText2').textContent='대기 중';
+  document.getElementById('profileValues').textContent='대화가 더 필요합니다...';
+  document.getElementById('profileAvoid').textContent='대화가 더 필요합니다...';
+  document.getElementById('profileMotiv').textContent='대화가 더 필요합니다...';
+  document.getElementById('umSecValues').className='cbp-section locked';
+  document.getElementById('umSecAvoid').className='cbp-section locked';
+  document.getElementById('umSecMotiv').className='cbp-section locked';
+  var w=document.createElement('div');w.id='cbWelcome';w.className='cb-welcome';
+  w.innerHTML='<div class="cb-welcome-t">무엇이 당신을 이끄나요?</div><div class="cb-welcome-s">당신의 이야기에서 본질을 추출합니다.</div><div class="cb-chips"><span class="cb-chip" data-q="나는 카페를 하고 싶어">카페 창업</span><span class="cb-chip" data-q="내가 진짜 좋아하는게 뭔지 모르겠어">자기 탐구</span><span class="cb-chip" data-q="브랜드를 만들고 싶은데 방향을 모르겠어">브랜드 방향</span></div>';
+  document.getElementById('cbMsgs').appendChild(w);
+  w.querySelectorAll('.cb-chip').forEach(function(c){c.addEventListener('click',function(){sendMsg(c.getAttribute('data-q'))})});
+  welcome=w;currentSessionMsgs=[];
+});
+
+/* FILE ATTACH – GPT-style: preview first, send with message */
+var pendingFile=null;
+function showAttachPreview(file,dataUrl){
+  removeAttachPreview();
+  pendingFile={file:file,dataUrl:dataUrl||null};
+  var preview=document.createElement('div');
+  preview.className='cb-attach-preview';
+  preview.id='cbAttachPreview';
+  if(file.type.startsWith('image/')&&dataUrl){
+    preview.innerHTML='<img class="cb-attach-preview-img" src="'+dataUrl+'" alt=""/><span class="cb-attach-preview-name">'+file.name+'</span><button class="cb-attach-preview-remove"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+  } else {
+    preview.innerHTML='<div class="cb-attach-preview-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><span class="cb-attach-preview-name">'+file.name+'</span><button class="cb-attach-preview-remove"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+  }
+  var inputArea=document.querySelector('.cb-input');
+  inputArea.insertBefore(preview,inputArea.querySelector('.cb-input-row'));
+  preview.querySelector('.cb-attach-preview-remove').addEventListener('click',removeAttachPreview);
+  sendBtn.classList.add('ready');
+}
+function removeAttachPreview(){
+  pendingFile=null;
+  var el=document.getElementById('cbAttachPreview');if(el)el.remove();
+  if(!ta.value.trim())sendBtn.classList.remove('ready');
+}
+document.getElementById('cbAttach').addEventListener('click',function(){
+  var input=document.createElement('input');input.type='file';input.accept='image/*,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx';
+  input.addEventListener('change',function(e){
+    var file=e.target.files[0];if(!file)return;
+    if(!box.classList.contains('expanded'))expandChat();
+    closePanels();
+    if(file.type.startsWith('image/')){
+      var reader=new FileReader();
+      reader.onload=function(ev){showAttachPreview(file,ev.target.result)};
+      reader.readAsDataURL(file);
+    } else {
+      showAttachPreview(file,null);
+    }
+    ta.focus();
+  });input.click();
+});
+var imageGallery=[];
+
+/* GALLERY */
+function renderGallery(){
+  var grid=document.getElementById('cbGalleryGrid');
+  if(!imageGallery.length){grid.innerHTML='<div class="cbp-gallery-empty">아직 이미지가 없습니다.<br>대화에서 이미지를 첨부해보세요.</div>';return}
+  grid.innerHTML='';imageGallery.forEach(function(img){
+    var item=document.createElement('div');item.className='cbp-gallery-item';
+    item.innerHTML='<img src="'+img.src+'" alt="gallery"/>';
+    item.addEventListener('click',function(){window.open(img.src,'_blank')});
+    grid.appendChild(item);
+  });
+}
+
+/* CHAT HISTORY – full session save/restore */
+var chatHistory=[];
+var currentSessionMsgs=[];
+function saveCurrentSession(){
+  if(!currentSessionMsgs.length)return;
+  var preview=currentSessionMsgs.find(function(m){return m.role==='user'&&m.type==='text'});
+  chatHistory.unshift({
+    date:new Date().toLocaleString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}),
+    preview:preview?preview.text:'(파일 첨부)',
+    messages:currentSessionMsgs.slice()
+  });
+}
+function renderHistory(){
+  var list=document.getElementById('cbHistoryList');
+  if(!chatHistory.length){list.innerHTML='<div class="cbh-empty">아직 대화 기록이 없습니다.<br>대화를 시작해보세요.</div>';return}
+  list.innerHTML='';chatHistory.forEach(function(session,i){
+    var item=document.createElement('div');item.className='cbh-item';
+    item.innerHTML='<div class="cbh-item-date">'+session.date+'</div><div class="cbh-item-preview">'+session.preview+'</div>';
+    item.addEventListener('click',function(){restoreSession(i)});
+    list.appendChild(item);
+  });
+}
+function restoreSession(idx){
+  closePanels();
+  var session=chatHistory[idx];if(!session)return;
+  chatStarted=true;msgCount=session.messages.filter(function(m){return m.role==='user'}).length;
+  msgs.innerHTML='';
+  session.messages.forEach(function(m){
+    if(m.type==='text'){addMsg(m.role,m.text)}
+    else if(m.type==='image'){
+      var d=document.createElement('div');d.className='msg msg-right';
+      d.innerHTML='<div class="msg-body"><img class="msg-img" src="'+m.src+'" alt="img"/></div>';
+      msgs.appendChild(d);
+    } else if(m.type==='file'){
+      var d=document.createElement('div');d.className='msg msg-right';
+      d.innerHTML='<div class="msg-body"><div class="cb-file-preview"><div class="cb-file-preview-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><span class="cb-file-preview-name">'+m.name+'</span></div></div>';
+      msgs.appendChild(d);
+    }
+  });
+  currentSessionMsgs=session.messages.slice();
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+/* BOOKMARKS */
+var bookmarks=[];
+function toggleBookmark(idx,text,role){
+  var existing=bookmarks.findIndex(function(b){return b.idx===idx});
+  if(existing!==-1){bookmarks.splice(existing,1);return false}
+  bookmarks.push({idx:idx,text:text,role:role,date:new Date().toLocaleString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})});return true;
+}
+function renderBookmarks(){
+  var list=document.getElementById('cbBookmarkListContent');
+  if(!bookmarks.length){list.innerHTML='<div class="cbh-empty">북마크한 메시지가 없습니다.<br>메시지에 마우스를 올려 🔖를 클릭하세요.</div>';return}
+  var html='';bookmarks.forEach(function(b){html+='<div class="cbh-item"><div class="cbh-item-date">'+b.date+' · '+(b.role==='ai'?'AI':'You')+'</div><div class="cbh-item-preview">'+b.text+'</div></div>'});
+  list.innerHTML=html;
+}
+
+/* LIVE PROFILE */
+var profileData={tags:[],essence:'',patterns:[],values:'대화가 더 필요합니다...',avoid:'대화가 더 필요합니다...',motiv:'대화가 더 필요합니다...',timeline:[]};
+
+/* SYSTEM PROMPTS */
+var SYSTEM_CORE='core';
+
+var SYSTEM_INTERPRET='interpret';
+
+var SYSTEM_META_EXTRACT='meta_extract';
+
+var conversationHistory=[];
+var unmaskRawData=[];
+var aletheiaSessionId='session_'+Date.now().toString(36)+Math.random().toString(36).substring(2,8);
+
+/* API CALL — 서버 프록시 경유 */
+async function callClaude(mode,history,maxTokens){
+  maxTokens=maxTokens||600;
+  var apiMessages=history.slice();
+  var response=await fetch('/api/chat',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      mode:mode,
+      messages:apiMessages,
+      max_tokens:maxTokens,
+      sessionId:aletheiaSessionId,
+      userId:'user_'+aletheiaSessionId
+    })
+  });
+  var data=await response.json();
+  if(data.error)throw new Error(data.error.message||'API error');
+  var fullResponse=data.content.map(function(item){return item.type==='text'?item.text:''}).filter(Boolean).join('\n');
+  if(fullResponse)return fullResponse;
+  throw new Error('Empty response');
+}
+
+/* BACKGROUND METADATA EXTRACTION */
+function extractMetaFromConversation(){
+  if(conversationHistory.length<2)return;
+  var last4=conversationHistory.slice(-4);
+  var convText=last4.map(function(m){return (m.role==='user'?'사용자':'AI')+': '+m.content}).join('\n');
+  
+  callClaude(SYSTEM_META_EXTRACT,[{role:'user',content:convText}],400).then(function(resp){
+    try{
+      var clean=resp.replace(/```json|```/g,'').trim();
+      var meta=JSON.parse(clean);
+      unmaskRawData.push({timestamp:Date.now(),turn:Math.floor(conversationHistory.length/2),meta:meta});
+      
+      /* Update profile tags */
+      if(meta.tags){
+        meta.tags.forEach(function(tag){
+          if(profileData.tags.indexOf(tag)===-1){profileData.tags.push(tag)}
+        });
+      }
+      if(meta.value)profileData.values=meta.value;
+      if(meta.desire)profileData.motiv=meta.desire;
+      if(meta.pattern){
+        profileData.patterns.push(meta.pattern);
+        profileData.avoid=meta.emotion||profileData.avoid;
+      }
+      
+      /* Timeline entry */
+      profileData.timeline.push({
+        turn:Math.floor(conversationHistory.length/2),
+        keywords:meta.keywords||[],
+        pattern:meta.pattern,
+        emotion:meta.emotion
+      });
+      
+      updateProfileUI();
+      /* ① INSERT PATTERN INSIGHT CARD */
+      if(meta.pattern){
+        insertInsightCard('🔍',meta.pattern);
+      } else if(meta.keywords&&meta.keywords.length>=2){
+        var kw=meta.keywords.slice(0,3).join(', ');
+        insertInsightCard('💡','반복 키워드 감지: '+kw);
+      }
+      console.log('[Unmask] 메타데이터 추출:',meta);
+    }catch(e){console.log('[Unmask] 파싱 실패:',e,resp)}
+  }).catch(function(e){console.log('[Unmask] 추출 API 실패:',e)});
+}
+
+/* SEND MESSAGE */
+function sendMsg(t){
+  var hasText=t&&t.trim();
+  var hasFile=!!pendingFile;
+  if(!hasText&&!hasFile)return;
+  if(hasText)t=t.trim();
+  if(!chatStarted){chatStarted=true;welcome.classList.add('hidden')}
+  if(!box.classList.contains('expanded'))expandChat();
+  closePanels();
+  if(hasFile){
+    if(pendingFile.file.type.startsWith('image/')&&pendingFile.dataUrl){
+      var d=document.createElement('div');d.className='msg msg-right';
+      d.innerHTML='<div class="msg-body"><img class="msg-img" src="'+pendingFile.dataUrl+'" alt=""/></div>';
+      msgs.appendChild(d);
+      imageGallery.push({src:pendingFile.dataUrl,date:new Date().toLocaleString('ko-KR',{month:'short',day:'numeric'})});
+      currentSessionMsgs.push({role:'user',type:'image',src:pendingFile.dataUrl});
+    } else {
+      var d=document.createElement('div');d.className='msg msg-right';
+      d.innerHTML='<div class="msg-body"><div class="cb-file-preview"><div class="cb-file-preview-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><span class="cb-file-preview-name">'+pendingFile.file.name+'</span></div></div>';
+      msgs.appendChild(d);
+      currentSessionMsgs.push({role:'user',type:'file',name:pendingFile.file.name});
+    }
+    removeAttachPreview();
+  }
+  if(hasText){addMsg('user',t);currentSessionMsgs.push({role:'user',type:'text',text:t});onUserMessage()}
+  ta.value='';ta.style.height='auto';sendBtn.classList.remove('ready');
+  if(!hasText)return;
+  conversationHistory.push({role:'user',content:t});
+  var typ=addTyping();
+  
+  /* Select system prompt based on model */
+  var sysPrompt=(currentModel==='Interpret')?SYSTEM_INTERPRET:SYSTEM_CORE;
+  
+  callClaude(sysPrompt,conversationHistory).then(function(aiResp){
+    typ.remove();addMsg('ai',aiResp);
+    currentSessionMsgs.push({role:'ai',type:'text',text:aiResp});
+    conversationHistory.push({role:'assistant',content:aiResp});
+    /* Background: extract metadata for Unmask every 2 turns */
+    if(conversationHistory.length%4===0||conversationHistory.length===2){
+      extractMetaFromConversation();
+    }
+  }).catch(function(err){
+    console.log('API error:',err);
+    typ.remove();
+    var fallback=respondFallback(t);
+    addMsg('ai',fallback);
+    currentSessionMsgs.push({role:'ai',type:'text',text:fallback});
+    conversationHistory.push({role:'assistant',content:fallback});
+    /* Still extract from keywords locally */
+    extractProfileLocal(t);
+  });
+}
+
+/* LOCAL FALLBACK EXTRACTION */
+var TAG_RULES=[
+  {keywords:['카페','커피','로스팅','바리스타','원두'],tag:'커피/카페'},
+  {keywords:['브랜드','로고','아이덴티티','디자인'],tag:'브랜드구축'},
+  {keywords:['좋아하는','진짜','모르겠','찾고'],tag:'자기탐색'},
+  {keywords:['공간','인테리어','분위기','설계'],tag:'공간감각'},
+  {keywords:['불안','걱정','두려','실패'],tag:'불확실성인식'},
+  {keywords:['자유','독립','나만의','혼자'],tag:'독립지향'},
+  {keywords:['경험','여행','느낌','감정','기억'],tag:'경험기반'},
+  {keywords:['완벽','디테일','꼼꼼','퀄리티'],tag:'완벽주의'},
+  {keywords:['사람','고객','손님','관계','소통'],tag:'관계중심'},
+  {keywords:['돈','수익','사업','매출','투자'],tag:'수익지향'}
+];
+function extractProfileLocal(text){
+  var changed=false;
+  TAG_RULES.forEach(function(rule){
+    var match=rule.keywords.some(function(k){return text.indexOf(k)!==-1});
+    if(match&&profileData.tags.indexOf(rule.tag)===-1){
+      profileData.tags.push(rule.tag);changed=true;
+    }
+  });
+  if(changed){
+    updateProfileUI();
+    /* Insert local insight card */
+    var matchedTags=[];
+    TAG_RULES.forEach(function(rule){
+      var match=rule.keywords.some(function(k){return text.indexOf(k)!==-1});
+      if(match&&profileData.tags.indexOf(rule.tag)!==-1)matchedTags.push(rule.tag);
+    });
+    if(matchedTags.length>0)insertInsightCard('🏷️','키워드 감지: '+matchedTags.join(', '));
+  }
+}
+var umExtractCount=0;
+var umMsgCount=0;
+function updateProfileUI(){
+  umExtractCount++;
+  /* Tags */
+  var container=document.getElementById('cbProfileTags');container.innerHTML='';
+  profileData.tags.forEach(function(tag,i){var el=document.createElement('span');el.className='cbp-tag'+(i===profileData.tags.length-1?' new':'');el.textContent=tag;container.appendChild(el)});
+  /* Sections - unlock with animation when data arrives */
+  var secV=document.getElementById('umSecValues');
+  var secA=document.getElementById('umSecAvoid');
+  var secM=document.getElementById('umSecMotiv');
+  if(profileData.values&&profileData.values!=='대화가 더 필요합니다...'){
+    document.getElementById('profileValues').textContent=profileData.values;
+    if(secV.classList.contains('locked')){secV.classList.remove('locked');secV.classList.add('unlocked')}
+  }
+  if(profileData.avoid&&profileData.avoid!=='대화가 더 필요합니다...'){
+    document.getElementById('profileAvoid').textContent=profileData.avoid;
+    if(secA.classList.contains('locked')){secA.classList.remove('locked');secA.classList.add('unlocked')}
+  }
+  if(profileData.motiv&&profileData.motiv!=='대화가 더 필요합니다...'){
+    document.getElementById('profileMotiv').textContent=profileData.motiv;
+    if(secM.classList.contains('locked')){secM.classList.remove('locked');secM.classList.add('unlocked')}
+  }
+  /* Depth bar */
+  var depth=Math.min(umMsgCount/10,1);
+  document.getElementById('umDepthFill').style.width=Math.round(depth*100)+'%';
+  document.getElementById('umDepthCount').textContent=umMsgCount+'\ud68c';
+  /* Badge - show count & pop */
+  var badge=document.getElementById('umBadge');
+  badge.textContent=umExtractCount;
+  badge.classList.add('show');
+  /* Button glow burst */
+  profileBtn.classList.remove('unmask-glow','unmask-shake');
+  void profileBtn.offsetWidth;
+  profileBtn.classList.add('unmask-glow');
+  setTimeout(function(){profileBtn.classList.remove('unmask-glow')},1600);
+  /* Status */
+  var dot=document.getElementById('umStatusDot2');
+  var txt=document.getElementById('umStatusText2');
+  if(dot)dot.classList.add('active');
+  if(txt)txt.textContent='\ucd94\ucd9c \uc644\ub8cc \u2014 '+umExtractCount+'\uac74';
+  /* ③ UPDATE PROGRESS STAGES */
+  updateDepthStages();
+  /* ② GENERATE ESSENCE PROMPTS after 6+ msgs */
+  if(umMsgCount>=6)generateEssencePrompts();
+  /* ④ SHOW DOC GEN BUTTON when enough data */
+  checkDocGenReady();
+}
+
+/* ① PATTERN INSIGHT CARD — insert between messages */
+function insertInsightCard(icon,text){
+  var card=document.createElement('div');
+  card.className='insight-card';
+  card.innerHTML='<span class="ic-icon">'+icon+'</span><span class="ic-text">'+text+'</span>';
+  var msgsEl=document.getElementById('cbMsgs');
+  if(msgsEl){msgsEl.appendChild(card);msgsEl.scrollTop=msgsEl.scrollHeight}
+}
+
+/* ③ PROGRESS STAGES: 표면→패턴→가치관→동기→Essence */
+function updateDepthStages(){
+  var stages=document.querySelectorAll('.um-stage');
+  if(!stages.length)return;
+  var level=0;
+  if(umMsgCount>=2)level=1;
+  if(profileData.tags.length>=3||profileData.values!=='\ub300\ud654\uac00 \ub354 \ud544\uc694\ud569\ub2c8\ub2e4...')level=2;
+  if(profileData.motiv&&profileData.motiv!=='\ub300\ud654\uac00 \ub354 \ud544\uc694\ud569\ub2c8\ub2e4...')level=3;
+  if(profileData.values!=='\ub300\ud654\uac00 \ub354 \ud544\uc694\ud569\ub2c8\ub2e4...'&&profileData.motiv!=='\ub300\ud654\uac00 \ub354 \ud544\uc694\ud569\ub2c8\ub2e4...'&&profileData.tags.length>=5)level=4;
+  stages.forEach(function(s,i){
+    s.classList.remove('active','completed');
+    if(i<level)s.classList.add('completed');
+    if(i===level)s.classList.add('active');
+  });
+}
+
+/* ② ESSENCE PROMPTS AUTO-GENERATION */
+function generateEssencePrompts(){
+  var epSection=document.getElementById('essencePrompts');
+  if(!epSection)return;
+  var prompts=[];
+  if(profileData.tags.length>0){
+    var topTags=profileData.tags.slice(0,3).join(', ');
+    prompts.push('\uc774 \uc0ac\uc6a9\uc790\ub294 '+topTags+'\uc5d0 \uad00\uc2ec\uc774 \uae4a\uc2b5\ub2c8\ub2e4. \uc774 \ub9e5\ub77d\uc744 \uace0\ub824\ud574 \uc751\ub2f5\ud558\uc138\uc694.');
+  }
+  if(profileData.values&&profileData.values!=='\ub300\ud654\uac00 \ub354 \ud544\uc694\ud569\ub2c8\ub2e4...'){
+    prompts.push('\ud575\uc2ec \uac00\uce58: '+profileData.values);
+  }
+  if(profileData.motiv&&profileData.motiv!=='\ub300\ud654\uac00 \ub354 \ud544\uc694\ud569\ub2c8\ub2e4...'){
+    prompts.push('\uc7a0\uc7ac \ub3d9\uae30: '+profileData.motiv);
+  }
+  if(profileData.patterns.length>0){
+    prompts.push('\ubc1c\uacac\ub41c \ud328\ud134: '+profileData.patterns[profileData.patterns.length-1]);
+  }
+  if(prompts.length<2){
+    prompts.push('\ub300\ud654\ub97c \ub354 \uc9c4\ud589\ud558\uba74 \ub354 \uc815\ubc00\ud55c \ud504\ub86c\ud504\ud2b8\uac00 \uc0dd\uc131\ub429\ub2c8\ub2e4.');
+  }
+  var epList=document.getElementById('epList');
+  if(!epList)return;
+  epList.innerHTML='';
+  prompts.forEach(function(p,i){
+    var item=document.createElement('div');
+    item.className='ep-item'+(i===0?' preview':' locked');
+    item.textContent=p;
+    epList.appendChild(item);
+  });
+  epSection.style.display='block';
+}
+
+/* ④ ESSENCE DOC GENERATION — show button when ready */
+function checkDocGenReady(){
+  var ready=profileData.values!=='\ub300\ud654\uac00 \ub354 \ud544\uc694\ud569\ub2c8\ub2e4...'&&profileData.motiv!=='\ub300\ud654\uac00 \ub354 \ud544\uc694\ud569\ub2c8\ub2e4...'&&profileData.tags.length>=4;
+  var docGen=document.getElementById('essenceDocGen');
+  if(docGen)docGen.style.display=ready?'block':'none';
+}
+function generateEssenceDocument(){
+  var doc='# Essence Document\n\n';
+  doc+='## \ud0dc\uadf8\n'+profileData.tags.join(', ')+'\n\n';
+  doc+='## \uac00\uce58\uad00\n'+profileData.values+'\n\n';
+  doc+='## \uc7a0\uc7ac \ub3d9\uae30\n'+profileData.motiv+'\n\n';
+  if(profileData.patterns.length>0)doc+='## \ubc1c\uacac\ub41c \ud328\ud134\n'+profileData.patterns.join('\n')+'\n\n';
+  doc+='## AI \ud504\ub86c\ud504\ud2b8\n';
+  var epItems=document.querySelectorAll('.ep-item');
+  epItems.forEach(function(item){doc+='\u2022 '+item.textContent+'\n'});
+  doc+='\n---\nGenerated by Aletheia | '+new Date().toLocaleDateString('ko-KR');
+  navigator.clipboard.writeText(doc).then(function(){
+    var btn=document.getElementById('edGenBtn');
+    btn.textContent='\u2705 \ud074\ub9bd\ubcf4\ub4dc\uc5d0 \ubcf5\uc0ac\ub428';
+    setTimeout(function(){btn.innerHTML='<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Essence Document \uc0dd\uc131'},2000);
+  });
+}
+
+function onUserMessage(){
+  umMsgCount++;
+  /* Depth bar update */
+  var depth=Math.min(umMsgCount/10,1);
+  var fill=document.getElementById('umDepthFill');
+  if(fill)fill.style.width=Math.round(depth*100)+'%';
+  var cnt=document.getElementById('umDepthCount');
+  if(cnt)cnt.textContent=umMsgCount+'\ud68c';
+  /* Status - analyzing */
+  var dot=document.getElementById('umStatusDot2');
+  var txt=document.getElementById('umStatusText2');
+  if(dot)dot.classList.add('active');
+  if(txt)txt.textContent='\ubd84\uc11d \uc911...';
+  /* Button subtle shake on every message */
+  profileBtn.classList.remove('unmask-shake');
+  void profileBtn.offsetWidth;
+  profileBtn.classList.add('unmask-shake');
+  setTimeout(function(){profileBtn.classList.remove('unmask-shake')},600);
+}
+
+/* MODEL SELECTOR */
+var menu=document.getElementById('modelMenu');
+function updateModelLocks(){var plan=authUser?authUser.plan:'free';menu.querySelectorAll('.mm-opt').forEach(function(o){o.classList.toggle('locked',o.getAttribute('data-tier')==='seeker'&&plan!=='seeker')})}
+function openModelMenu(trigger){var r=trigger.getBoundingClientRect();menu.style.left=r.left+'px';menu.style.bottom=(window.innerHeight-r.top+8)+'px';menu.style.top='auto';menu.querySelectorAll('.mm-opt').forEach(function(o){o.classList.toggle('active',o.getAttribute('data-model')===currentModel)});updateModelLocks();menu.classList.add('show')}
+document.getElementById('cbModel').addEventListener('click',function(e){e.stopPropagation();if(menu.classList.contains('show')){menu.classList.remove('show');return}openModelMenu(this)});
+menu.addEventListener('click',function(e){var opt=e.target.closest('.mm-opt');if(!opt)return;e.stopPropagation();if(opt.classList.contains('locked')){menu.classList.remove('show');openModal('pricingOverlay');return}currentModel=opt.getAttribute('data-model');var col=opt.getAttribute('data-color');document.querySelectorAll('.cb-model .model-name').forEach(function(n){n.textContent=currentModel});document.querySelectorAll('.cb-model .dot').forEach(function(d){d.style.background=col});document.getElementById('cbHeaderName').textContent=MODEL_NAMES[currentModel];menu.classList.remove('show')});
+document.addEventListener('click',function(e){if(!e.target.closest('.cb-model')&&!e.target.closest('#modelMenu'))menu.classList.remove('show')});
+
+/* CHAT */
+var msgs=document.getElementById('cbMsgs'),welcome=document.getElementById('cbWelcome'),ta=document.getElementById('cbTa'),sendBtn=document.getElementById('cbSend');
+var chatStarted=false,msgCount=0,globalMsgIdx=0;
+var BKMK_SVG='<svg viewBox="0 0 24 24"><path d="M6 4h12a1 1 0 0 1 1 1v16l-7-4-7 4V5a1 1 0 0 1 1-1z"/></svg>';
+var questions=['그게 정말 당신이 원하는 건가요?','왜 그것이어야 하나요?','그 선택의 뿌리가 어디에 있는지 기억나시나요?','혹시 그 반대를 상상해본 적 있나요?','당신이 그 단어를 선택한 이유가 궁금합니다.','지금 말씀하신 것과 처음에 말씀하신 것 사이에 흥미로운 간극이 있어요.','그건 당신의 기준인가요, 아니면 누군가 정해준 기준인가요?'];
+
+function respondFallback(t){
+  msgCount++;
+  var deep=[
+    '당신이 방금 말한 것 속에 흥미로운 물성이 숨어있어요. 조금 더 들려주세요.',
+    '그 경험이 당신에게 남긴 잔상은 어떤 형태인가요?',
+    '반복되는 패턴이 보이기 시작합니다. "'+t.split(' ')[0]+'" — 이게 당신의 본질에 어떻게 연결되나요?',
+    '표면 아래에 더 깊은 동기가 있는 것 같아요. 그 순간 당신은 무엇을 느꼈나요?',
+    '당신의 이야기에서 원재료가 보입니다. 이것을 어떤 형태로 세상에 내놓고 싶으세요?',
+    '흥미롭군요. 당신이 선택하는 단어들이 하나의 방향을 가리키고 있어요.',
+    '그건 단순한 경험이 아니라, 당신만의 관점이에요. 그 관점이 처음 형성된 순간이 있나요?',
+    '지금까지의 대화에서 패턴이 드러나고 있습니다. Unmask에서 프로필을 확인해보시겠어요?'
+  ];
+  return deep[Math.min(msgCount-1,deep.length-1)];
+}
+function addMsg(role,text){
+  var idx=globalMsgIdx++;
+  var d=document.createElement('div');d.className=role==='user'?'msg msg-right':'msg';
+  if(role==='ai'){
+    d.innerHTML='<div class="msg-ava ai">'+LOGO+'</div><div class="msg-body"><div class="msg-role">'+MODEL_NAMES[currentModel]+'</div><div class="msg-text">'+text.replace(/\n/g,'<br>')+'</div><div class="msg-actions"><button class="msg-action-btn" data-bk="'+idx+'" data-text="'+text.replace(/"/g,'&quot;')+'" data-role="'+role+'" title="북마크">'+BKMK_SVG+'</button></div></div>';
+  } else {
+    d.innerHTML='<div class="msg-body"><div class="msg-text">'+text.replace(/\n/g,'<br>')+'</div></div>';
+  }
+  msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;
+  var bkBtn=d.querySelector('.msg-action-btn[data-bk]');
+  if(bkBtn){bkBtn.addEventListener('click',function(){
+    var btn=this,i=parseInt(btn.getAttribute('data-bk')),t=btn.getAttribute('data-text'),r=btn.getAttribute('data-role');
+    var added=toggleBookmark(i,t,r);btn.classList.toggle('bookmarked',added);
+  });}
+}
+function addTyping(){var d=document.createElement('div');d.className='msg';d.innerHTML='<div class="msg-ava ai">'+LOGO+'</div><div class="msg-body"><div class="msg-role">'+MODEL_NAMES[currentModel]+'</div><div class="typing"><span></span><span></span><span></span></div></div>';msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d}
+ta.addEventListener('input',function(){ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,100)+'px';sendBtn.classList.toggle('ready',ta.value.trim().length>0||!!pendingFile)});
+ta.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg(ta.value)}});
+sendBtn.addEventListener('click',function(){sendMsg(ta.value)});
+document.querySelectorAll('.cb-chip').forEach(function(c){c.addEventListener('click',function(){sendMsg(c.getAttribute('data-q'))})});
+
+/* HERO – typing sequence */
+(function(){
+  var text=t('heroTyping');
+  var el=document.getElementById('hlTyping');
+  var logo=document.getElementById('hlLogo');
+  var btns=document.getElementById('hlButtons');
+  var i=0;
+  el.innerHTML='<span class="cursor"></span>';
+  window._heroReplay=function(newText){
+    if(newText)text=newText;
+    i=0;el.innerHTML='<span class="cursor"></span>';
+    logo.classList.remove('visible');btns.classList.remove('visible');
+    (function type(){
+      if(i<text.length){el.innerHTML=text.substring(0,i+1)+'<span class="cursor"></span>';i++;setTimeout(type,60+Math.random()*70)}
+      else{setTimeout(function(){el.innerHTML=text;logo.classList.add('visible');btns.classList.add('visible')},800)}
+    })();
+  };
+  setTimeout(function(){
+    (function type(){
+      if(i<text.length){
+        el.innerHTML=text.substring(0,i+1)+'<span class="cursor"></span>';
+        i++;
+        var speed=60+Math.random()*70;
+        setTimeout(type,speed);
+      } else {
+        /* typing done → show logo + buttons */
+        setTimeout(function(){
+          el.innerHTML=text;
+          logo.classList.add('visible');
+          btns.classList.add('visible');
+        },800);
+      }
+    })();
+  },600);
+})();
+
+/* BIG-TYPO */
+document.querySelectorAll('.big-typo').forEach(function(el){var text=el.innerText.trim();el.innerHTML='';text.split('').forEach(function(ch,i){var span=document.createElement('span');span.innerText=ch;span.className='char';span.style.transitionDelay=i*0.03+'s';el.appendChild(span)})});
+document.querySelectorAll('.method-row').forEach(function(row){row.addEventListener('mouseenter',function(){row.querySelectorAll('.char').forEach(function(c){c.style.transform='translateX(20px)'})});row.addEventListener('mouseleave',function(){row.querySelectorAll('.char').forEach(function(c){c.style.transform='translateX(0)'})})});
+
+/* OBSERVERS */
+var revealObs=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting)e.target.classList.add('active')})},{threshold:0.1});
+document.querySelectorAll('.reveal').forEach(function(el){revealObs.observe(el)});
+var typingObs=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){if(!e.target.classList.contains('typing-active')){var delay=parseInt(e.target.getAttribute('data-delay'))||0;setTimeout(function(){if(!e.target.classList.contains('typing-active')){e.target.classList.add('typing-active');var text=e.target.getAttribute('data-text');e.target.innerText='';var i=0;(function type(){if(i<text.length&&e.target.classList.contains('typing-active')){e.target.innerText+=text.charAt(i);i++;setTimeout(type,60)}})()}},delay)}}else{e.target.classList.remove('typing-active');e.target.innerText=''}})},{threshold:0.3});
+document.querySelectorAll('.typing-target').forEach(function(el){typingObs.observe(el)});
+
+/* ===== DEMO ANIMATIONS ===== */
+(function(){
+  /* Demo chat typing animation */
+  var demoChatObs=new IntersectionObserver(function(entries){entries.forEach(function(e){
+    if(e.isIntersecting&&!e.target.dataset.animated){
+      e.target.dataset.animated='true';
+      var msgs=e.target.querySelectorAll('.dcm-msg');
+      msgs.forEach(function(msg,i){
+        setTimeout(function(){
+          msg.classList.add('show');
+          var bubble=msg.querySelector('.dcm-bubble');
+          if(bubble&&bubble.dataset.demo){
+            var text=bubble.dataset.demo;
+            bubble.textContent='';
+            var j=0;
+            (function typeChar(){
+              if(j<text.length){bubble.textContent+=text.charAt(j);j++;setTimeout(typeChar,30+Math.random()*20)}
+            })();
+          }
+        },i*1200);
+      });
+    }
+  })},{threshold:0.3});
+  var demoChat=document.getElementById('demo-chat-1');
+  if(demoChat)demoChatObs.observe(demoChat);
+
+  /* Demo tags animation */
+  var demoTagObs=new IntersectionObserver(function(entries){entries.forEach(function(e){
+    if(e.isIntersecting&&!e.target.dataset.animated){
+      e.target.dataset.animated='true';
+      var tags=e.target.querySelectorAll('.dpm-tag');
+      tags.forEach(function(tag,i){
+        var delay=parseInt(tag.dataset.delay)||i*200;
+        setTimeout(function(){tag.classList.add('show')},delay+300);
+      });
+    }
+  })},{threshold:0.3});
+  var demoTags=document.getElementById('demo-tags');
+  if(demoTags)demoTagObs.observe(demoTags);
+})();
+/* ===== END DEMO ANIMATIONS ===== */
+
+/* ARCHIVE MAP – draw connecting lines */
+(function(){
+  var connections=[[0,1],[1,2],[0,3],[1,4],[2,5],[3,4],[4,5]];
+  var canvas=document.getElementById('archiveMapCanvas');
+  var svg=document.getElementById('mapLines');
+  if(!canvas||!svg)return;
+  function drawLines(){
+    svg.innerHTML='';
+    var nodes=canvas.querySelectorAll('.map-node');
+    var cRect=canvas.getBoundingClientRect();
+    connections.forEach(function(c){
+      var a=nodes[c[0]],b=nodes[c[1]];
+      if(!a||!b)return;
+      var aR=a.getBoundingClientRect(),bR=b.getBoundingClientRect();
+      var x1=aR.left-cRect.left+aR.width/2,y1=aR.top-cRect.top+aR.height/2;
+      var x2=bR.left-cRect.left+bR.width/2,y2=bR.top-cRect.top+bR.height/2;
+      var line=document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',x1);line.setAttribute('y1',y1);
+      line.setAttribute('x2',x2);line.setAttribute('y2',y2);
+      svg.appendChild(line);
+    });
+  }
+  var obs=new MutationObserver(function(){if(canvas.closest('.page.active'))setTimeout(drawLines,100)});
+  obs.observe(document.getElementById('page-archive'),{attributes:true,attributeFilter:['class']});
+  window.addEventListener('resize',function(){if(canvas.closest('.page.active'))drawLines()});
+  setTimeout(drawLines,500);
+})();
+
+/* PROJECT DETAIL */
+(function(){
+  var PROJECTS=[
+    {cat:'Cafe & Bakery',name:'GYEOL',sub:'침묵의 서사',
+     desc:'불필요한 소음을 제거하고 재료 본연의 소리에 집중하는 베이커리. 모든 메뉴는 하나의 재료에서 출발하며, 그 재료가 가진 고유한 결을 최대한 살리는 방식으로 만들어진다.',
+     tags:['Minimalism','Silence','Material-first','Sensory'],
+     meta:{field:'F&B',method:'Core → Unmask',period:'2024.03 – 2024.06'},
+     patterns:['dots','lines','grid'],
+     images:{main:'/images/gyeol/main.jpg',d1:'/images/gyeol/detail-01.jpg',d2:'/images/gyeol/detail-02.jpg'}},
+    {cat:'Space Design',name:'RAW CONCRETE',sub:'가공되지 않은 날것',
+     desc:'거친 콘크리트 텍스처를 그대로 살려 진정성을 투영하는 공간 브랜드. 마감하지 않는 것이 마감이며, 시간이 지남에 따라 자연스러운 풍화가 곧 디자인이 된다.',
+     tags:['Brutalism','Authenticity','Time','Unfinished'],
+     meta:{field:'Space Design',method:'Interpret → Core',period:'2024.01 – 2024.04'},
+     patterns:['grid','cross','lines'],
+     images:{main:'/images/raw-concrete/main.jpg',d1:'/images/raw-concrete/detail-01.jpg',d2:'/images/raw-concrete/detail-02.jpg'}},
+    {cat:'Fashion',name:'STRUCTURE 01',sub:'기능적 본질주의',
+     desc:'장식을 배제하고 옷의 구조와 기능에만 집중한 레이블. 모든 시접은 외부로 노출되며, 봉제 과정 자체가 디자인 언어가 된다.',
+     tags:['Structure','Function','Less','Exposed'],
+     meta:{field:'Fashion',method:'Core → Interpret',period:'2024.05 – 2024.08'},
+     patterns:['lines','dots','cross'],
+     images:{main:'/images/structure-01/main.jpg',d1:'/images/structure-01/detail-01.jpg',d2:'/images/structure-01/detail-02.jpg'}},
+    {cat:'Fragrance',name:'DEEP SOIL',sub:'고향의 흙냄새',
+     desc:'원초적인 기억인 흙의 향기를 현대적으로 재해석한 프래그런스 브랜드. 베이스 노트로만 구성된 비대칭 향수를 만든다.',
+     tags:['Memory','Earth','Base-note','Primal'],
+     meta:{field:'Fragrance',method:'Core → Unmask → Interpret',period:'2024.02 – 2024.05'},
+     patterns:['cross','dots','grid'],
+     images:{main:'/images/deep-soil/main.jpg',d1:'/images/deep-soil/detail-01.jpg',d2:'/images/deep-soil/detail-02.jpg'}},
+    {cat:'Exhibition',name:'THE VOID',sub:'비움의 미학',
+     desc:'아무것도 전시하지 않음으로써 관람객을 전시품으로 만드는 공간. 빈 화이트 큐브에 들어선 관람객은 자신의 그림자, 발소리, 호흡만을 인식하게 된다.',
+     tags:['Void','Self','Mirror','Nothing'],
+     meta:{field:'Exhibition',method:'Interpret',period:'2024.07 – 2024.09'},
+     patterns:['dots','grid','lines'],
+     images:{main:'/images/the-void/main.jpg',d1:'/images/the-void/detail-01.jpg',d2:'/images/the-void/detail-02.jpg'}},
+    {cat:'Architecture',name:'MONOLITH',sub:'단일한 거대함',
+     desc:'이음새 없는 거대한 검은 돌덩어리. 압도적 숭고미를 추구하는 건축 프로젝트. 단일 소재, 단일 형태, 단일 색상으로 인간이 자연 앞에서 느끼는 원초적인 경외감을 재현한다.',
+     tags:['Sublime','Monolithic','Black','Awe'],
+     meta:{field:'Architecture',method:'Core → Interpret',period:'2024.04 – 2024.10'},
+     patterns:['grid','lines','cross'],
+     images:{main:'/images/monolith/main.jpg',d1:'/images/monolith/detail-01.jpg',d2:'/images/monolith/detail-02.jpg'}}
+  ];
+  var PAT_CLASS={dots:'pd-pat-dots',lines:'pd-pat-lines',grid:'pd-pat-grid',cross:'pd-pat-cross'};
+  var detail=document.getElementById('projectDetail');
+  var inner=document.getElementById('pdInner');
+  var closeBtn=document.getElementById('pdClose');
+  /* Pre-build all HTML */
+  var prebuilt=PROJECTS.map(function(p){
+    var h='<div class="pd-cat">'+p.cat+'</div>';
+    h+='<div class="pd-name">'+p.name+'</div>';
+    h+='<div class="pd-sub">'+p.sub+'</div>';
+    function imgOrPat(src,pat,label,wide){
+      var cls=wide?'pd-gallery-item wide':'pd-gallery-item';
+      if(src)return '<div class="'+cls+'"><img src="'+src+'" alt="'+label+'" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'"><div class="pd-gallery-placeholder '+PAT_CLASS[pat]+'" style="display:none">'+label+'</div></div>';
+      return '<div class="'+cls+'"><div class="pd-gallery-placeholder '+PAT_CLASS[pat]+'">'+label+'</div></div>';
+    }
+    h+='<div class="pd-gallery">'+imgOrPat(p.images.main,p.patterns[0],p.name,true)+imgOrPat(p.images.d1,p.patterns[1],'Detail 01')+imgOrPat(p.images.d2,p.patterns[2],'Detail 02')+'</div>';
+    h+='<div class="pd-tags">';p.tags.forEach(function(t){h+='<span class="pd-tag">'+t+'</span>'});h+='</div>';
+    h+='<div class="pd-section"><div class="pd-section-title">Essence</div><div class="pd-section-body">'+p.desc+'</div></div>';
+    h+='<div class="pd-meta"><div class="pd-meta-item"><span class="pd-meta-label">Field</span><span class="pd-meta-value">'+p.meta.field+'</span></div><div class="pd-meta-item"><span class="pd-meta-label">Method</span><span class="pd-meta-value">'+p.meta.method+'</span></div><div class="pd-meta-item"><span class="pd-meta-label">Period</span><span class="pd-meta-value">'+p.meta.period+'</span></div></div>';
+    return h;
+  });
+  function openProject(idx){
+    if(!prebuilt[idx])return;
+    window._alPaused=true;
+    document.body.classList.add('pd-open');
+    inner.innerHTML=prebuilt[idx];
+    inner.scrollTop=0;
+    requestAnimationFrame(function(){detail.classList.add('show')});
+  }
+  function closeProject(){detail.classList.remove('show');document.body.classList.remove('pd-open');setTimeout(function(){window._alPaused=false},650)}
+  closeBtn.addEventListener('click',closeProject);
+  detail.querySelector('.project-detail-bg').addEventListener('click',closeProject);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&detail.classList.contains('show'))closeProject()});
+  /* Mouse proximity glow on map */
+  var mapCanvas=document.getElementById('archiveMapCanvas');
+  if(mapCanvas){
+    var mapNodes=mapCanvas.querySelectorAll('.map-node');
+    mapCanvas.addEventListener('mousemove',function(e){
+      var cr=mapCanvas.getBoundingClientRect();
+      var mx=e.clientX-cr.left,my=e.clientY-cr.top;
+      mapNodes.forEach(function(node){
+        var nr=node.getBoundingClientRect();
+        var nx=nr.left-cr.left+nr.width/2,ny=nr.top-cr.top+nr.height/2;
+        var dist=Math.sqrt((mx-nx)*(mx-nx)+(my-ny)*(my-ny));
+        var maxD=180,glow=Math.max(0,1-dist/maxD);
+        var dot=node.querySelector('.map-dot');
+        var glowEl=node.querySelector('.map-dot-glow');
+        if(glow>0){
+          var s=1+glow*0.8;
+          var isDk=document.body.classList.contains('dark-mode');
+          var shadow=isDk?'0 0 '+(glow*30)+'px rgba(255,255,255,'+(glow*0.4)+')':'0 0 '+(glow*25)+'px rgba(0,0,0,'+(glow*0.2)+')';
+          dot.style.transform='scale('+s+')';
+          dot.style.boxShadow=shadow;
+          if(glowEl)glowEl.style.transform='translate(-50%,-50%) scale('+(1.5+glow*1.5)+')';
+        } else {
+          dot.style.transform='';dot.style.boxShadow='';
+          if(glowEl)glowEl.style.transform='';
+        }
+      });
+    });
+    mapCanvas.addEventListener('mouseleave',function(){
+      mapNodes.forEach(function(node){
+        var dot=node.querySelector('.map-dot');
+        var glowEl=node.querySelector('.map-dot-glow');
+        dot.style.transform='';dot.style.boxShadow='';
+        if(glowEl)glowEl.style.transform='';
+      });
+    });
+  }
+
+  document.querySelectorAll('.map-node').forEach(function(node){
+    node.addEventListener('click',function(){openProject(parseInt(node.getAttribute('data-node')))});
+  });
+})();
+
+/* SCROLL PARALLAX */
+var aboutPage=document.getElementById('page-about');
+if(aboutPage){aboutPage.addEventListener('scroll',function(){var st=aboutPage.scrollTop,vh=window.innerHeight,progress=Math.min(st/(vh*0.5),1);var logo=document.getElementById('hlLogo');var bottom=document.querySelector('.hl-bottom');if(logo){logo.style.opacity=Math.max(1-progress*1.5,0);logo.style.transform='translateY('+-st*0.3+'px)'}if(bottom){bottom.style.opacity=Math.max(1-progress*1.5,0);bottom.style.transform='translateY('+-st*0.2+'px)'}})}
+
+/* ESC */
+window.addEventListener('keydown',function(e){if(e.key==='Escape'){document.querySelectorAll('.modal-overlay.show').forEach(function(m){closeModal(m.id)});collapseChat()}});
+
+/* HAMBURGER MENU */
+var hamburger=document.getElementById('navHamburger');
+var mobileMenu=document.getElementById('navMobileMenu');
+if(hamburger&&mobileMenu){
+  hamburger.addEventListener('click',function(){hamburger.classList.toggle('open');mobileMenu.classList.toggle('show')});
+  mobileMenu.querySelectorAll('li[data-page]').forEach(function(li){
+    li.addEventListener('click',function(){goPage(li.getAttribute('data-page'));hamburger.classList.remove('open');mobileMenu.classList.remove('show')});
+  });
+  var mobileSignIn=document.getElementById('mobileSignIn');
+  if(mobileSignIn)mobileSignIn.addEventListener('click',function(){hamburger.classList.remove('open');mobileMenu.classList.remove('show');document.getElementById('loginOverlay').classList.add('show')});
+}
+
+/* ESSENCE PROMPTS */
+var epSection=document.getElementById('essencePrompts');
+var epUnlock=document.getElementById('epUnlock');
+if(epUnlock)epUnlock.addEventListener('click',function(){document.getElementById('pricingOverlay').classList.add('show')});
+var edGenBtn=document.getElementById('edGenBtn');
+if(edGenBtn)edGenBtn.addEventListener('click',generateEssenceDocument);
+})();
+</script>
+<script>
+(function(){
+'use strict';
+try{
+var container=document.getElementById('canvas-container');if(!container||typeof THREE==='undefined')return;
+var _dk=document.body.classList.contains('dark-mode');
+var _bgH=_dk?0x0a0a0a:0xffffff;var _ptH=_dk?0x888888:0x111111;
+var scene=new THREE.Scene();scene.background=new THREE.Color(_bgH);scene.fog=new THREE.FogExp2(_bgH,0.002);
+var camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);camera.position.z=180;
+var renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(devicePixelRatio);renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.outputEncoding=THREE.sRGBEncoding;container.appendChild(renderer.domElement);
+function createPT(dark){var s=128,cv=document.createElement('canvas');cv.width=s;cv.height=s;var c=cv.getContext('2d'),g=c.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);if(dark){g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(0.2,'rgba(245,245,245,0.8)');g.addColorStop(0.5,'rgba(225,225,225,0.2)');g.addColorStop(1,'rgba(255,255,255,0)')}else{g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(0.2,'rgba(10,10,10,0.8)');g.addColorStop(0.5,'rgba(30,30,30,0.2)');g.addColorStop(1,'rgba(0,0,0,0)')}c.fillStyle=g;c.fillRect(0,0,s,s);return new THREE.CanvasTexture(cv)}
+var cg=new THREE.Group();scene.add(cg);
+var _c1Mat=new THREE.MeshBasicMaterial({color:_dk?0xffffff:0x000000,wireframe:true,transparent:true,opacity:0.15});
+var _c2Mat=new THREE.MeshBasicMaterial({color:_dk?0xaaaaaa:0x555555,wireframe:true,transparent:true,opacity:0.05});
+var _c1=new THREE.Mesh(new THREE.IcosahedronGeometry(3.8,5),_c1Mat);
+var _c2=new THREE.Mesh(new THREE.IcosahedronGeometry(5,2),_c2Mat);
+cg.add(_c1);cg.add(_c2);
+var N=28000,geo=new THREE.BufferGeometry(),pos=new Float32Array(N*3),orig=[],rnd=[];
+for(var i=0;i<N*3;i+=3){var R=20+85*Math.pow(Math.random(),1.2),th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);var x=R*Math.sin(ph)*Math.cos(th),y=R*Math.sin(ph)*Math.sin(th),z=R*Math.cos(ph);pos[i]=x;pos[i+1]=y;pos[i+2]=z;orig.push({x:x,y:y,z:z});rnd.push({speed:0.1+Math.random()*0.4,phase:Math.random()*Math.PI*2,amp:1.5+Math.random()*3})}
+geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+var _ptMat=new THREE.PointsMaterial({size:1.2,color:_ptH,map:createPT(_dk),transparent:true,opacity:0.55,sizeAttenuation:true,depthWrite:false,blending:THREE.NormalBlending});
+var pts=new THREE.Points(geo,_ptMat);scene.add(pts);
+window._alScene={scene:scene,pts:pts,c1:_c1,c2:_c2,createPT:createPT};
+scene.add(new THREE.AmbientLight(0xffffff,1.5));var dl=new THREE.DirectionalLight(0xffffff,2);dl.position.set(50,50,50);scene.add(dl);
+var composer=new THREE.EffectComposer(renderer);composer.addPass(new THREE.RenderPass(scene,camera));composer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.1,0.5,0.98));
+var time=0,mx=0,my=0;
+document.addEventListener('mousemove',function(e){mx=(e.clientX-innerWidth/2)*0.05;my=(e.clientY-innerHeight/2)*0.05});
+(function animate(){requestAnimationFrame(animate);if(window._alPaused)return;time+=0.0008;var p=geo.attributes.position.array;for(var i=0;i<N;i++){var i3=i*3,o=orig[i],r=rnd[i],w=Math.sin(time*r.speed+r.phase)*r.amp;p[i3]=o.x+Math.cos(time*0.5+r.phase)*1.5;p[i3+1]=o.y+Math.sin(time*0.3+r.phase)*1.5+w;p[i3+2]=o.z+w}geo.attributes.position.needsUpdate=true;pts.rotation.y+=0.0001+mx*0.00005;pts.rotation.x+=my*0.00005;cg.rotation.y-=0.0005;cg.rotation.x+=0.0002;composer.render()})();
+addEventListener('resize',function(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight)});
+}catch(e){console.log('Three.js skipped:',e)}
+})();
+</script>
+
+</body>
+</html>

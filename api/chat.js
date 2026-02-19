@@ -6,7 +6,11 @@ const PROMPTS = {
   core: require('./_prompts/core'),
   interpret: require('./_prompts/interpret'),
   meta_extract: require('./_prompts/meta'),
-  interpret_analysis: require('./_prompts/interpret-analysis')
+  interpret_analysis: require('./_prompts/interpret-analysis'),
+  essence_document: require('./_prompts/essence-document'),
+  business_proposal: require('./_prompts/business-proposal'),
+  brand_guide: require('./_prompts/brand-guide'),
+  cafe_proposal: require('./_prompts/cafe-proposal')
 };
 
 const supabaseUrl = process.env.SUPABASE_URL;

@@ -69,6 +69,10 @@ nav{position:fixed;top:20px;left:50%;transform:translateX(-50%);width:98%;max-wi
 .hl-typing{font-size:clamp(28px,3.5vw,52px);font-weight:400;color:#222;letter-spacing:0.01em;min-height:1.4em;text-align:center;line-height:1.3;text-shadow:0 0 40px rgba(255,255,255,0.9)}
 .hl-typing .cursor{display:inline-block;width:2px;height:1em;background:#000;margin-left:2px;animation:blink 0.6s infinite;vertical-align:text-bottom}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.hl-subtitle{margin-top:20px;text-align:center;opacity:0;transform:translateY(10px);transition:opacity 2s ease,transform 2s ease}
+.hl-subtitle.visible{opacity:1;transform:translateY(0)}
+.hl-sub-line1{font-size:clamp(11px,1.2vw,14px);color:#666;letter-spacing:0.02em;margin-bottom:8px;line-height:1.5}
+.hl-sub-line2{font-size:clamp(10px,1.1vw,13px);color:#888;letter-spacing:0.01em;line-height:1.6;font-weight:300}
 .hl-buttons{display:flex;gap:12px;margin-top:24px;opacity:0;transform:translateY(10px);filter:blur(6px);transition:opacity 4s cubic-bezier(0.19,1,0.22,1),transform 4s cubic-bezier(0.19,1,0.22,1),filter 4s cubic-bezier(0.19,1,0.22,1)}
 .hl-buttons.visible{opacity:1;transform:translateY(0);filter:blur(0)}
 .hl-btn{padding:12px 28px;border:1px solid rgba(0,0,0,0.1);border-radius:30px;background:rgba(255,255,255,0.2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);font-size:11px;font-weight:600;letter-spacing:0.12em;color:#111;cursor:pointer;transition:all 0.3s;font-family:inherit}
@@ -220,6 +224,8 @@ body:not(.dark-mode) .ed-btn{border-color:rgba(0,0,0,0.1);background:rgba(0,0,0,
   .hero-top{height:80vh;gap:14px}
   .hl-logo{font-size:16px!important}
   .hl-typing{font-size:22px!important}
+  .hl-sub-line1{font-size:10px!important}
+  .hl-sub-line2{font-size:9px!important}
   .hl-buttons{flex-direction:column;gap:8px}
   .hl-btn{font-size:10px;padding:10px 24px}
   #page-about section{padding:80px 0!important}
@@ -271,6 +277,8 @@ body:not(.dark-mode) .ed-btn{border-color:rgba(0,0,0,0.1);background:rgba(0,0,0,
   nav{padding:0 12px;height:50px}
   .hero-top{height:70vh}
   .hl-typing{font-size:18px!important}
+  .hl-sub-line1{font-size:9px!important}
+  .hl-sub-line2{font-size:8px!important}
   .demo-title{font-size:18px!important}
   .dcm-messages{min-height:200px;padding:10px}
   .dcm-bubble{font-size:12px}
@@ -785,6 +793,8 @@ body.dark-mode .pd-item:hover{background:rgba(255,255,255,0.06)}
 body.dark-mode .hl-logo{color:#fff;text-shadow:0 0 30px rgba(0,0,0,0.5)}
 body.dark-mode .hl-typing{color:#ddd;text-shadow:0 0 40px rgba(0,0,0,0.5)}
 body.dark-mode .hl-typing .cursor{background:#fff}
+body.dark-mode .hl-sub-line1{color:#aaa}
+body.dark-mode .hl-sub-line2{color:#888}
 body.dark-mode .hl-btn{color:#ddd;border-color:rgba(255,255,255,0.15);background:rgba(255,255,255,0.04)}
 body.dark-mode .hl-btn:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.3)}
 body.dark-mode .label{color:#fff;text-shadow:0 0 30px rgba(0,0,0,0.5)}
@@ -1008,6 +1018,10 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
       <div class="hl-logo" id="hlLogo">Aletheia</div>
       <div class="hl-bottom">
         <div class="hl-typing" id="hlTyping"></div>
+        <div class="hl-subtitle" id="hlSubtitle">
+          <div class="hl-sub-line1">가려진 본질을 드러내는 AI 대화 서비스</div>
+          <div class="hl-sub-line2">物性 — 겉치레를 벗겨낸 당신 그 자체. 그것이 가장 강한 이야기입니다.</div>
+        </div>
         <div class="hl-buttons" id="hlButtons">
           <button class="hl-btn" onclick="goPage('unmask')">UNMASK</button>
           <button class="hl-btn" onclick="goPage('interpret')">INTERPRET</button>
@@ -2597,10 +2611,11 @@ function generateContextMessage(){
   window._heroReplay=function(newText){
     if(newText)text=newText;
     i=0;el.innerHTML='<span class="cursor"></span>';
-    logo.classList.remove('visible');btns.classList.remove('visible');
+    var sub=document.getElementById('hlSubtitle');
+    logo.classList.remove('visible');if(sub)sub.classList.remove('visible');btns.classList.remove('visible');
     (function type(){
       if(i<text.length){el.innerHTML=text.substring(0,i+1)+'<span class="cursor"></span>';i++;setTimeout(type,60+Math.random()*70)}
-      else{setTimeout(function(){el.innerHTML=text;logo.classList.add('visible');btns.classList.add('visible')},800)}
+      else{setTimeout(function(){el.innerHTML=text;logo.classList.add('visible');if(sub)sub.classList.add('visible');btns.classList.add('visible')},800)}
     })();
   };
   setTimeout(function(){
@@ -2611,10 +2626,12 @@ function generateContextMessage(){
         var speed=60+Math.random()*70;
         setTimeout(type,speed);
       } else {
-        /* typing done → show logo + buttons */
+        /* typing done → show logo + subtitle + buttons */
         setTimeout(function(){
           el.innerHTML=text;
           logo.classList.add('visible');
+          var sub=document.getElementById('hlSubtitle');
+          if(sub)sub.classList.add('visible');
           btns.classList.add('visible');
         },800);
       }

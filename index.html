@@ -2049,15 +2049,42 @@ function handleNextStepAction(action){
   if(card)card.remove();
 
   if(action==='business'){
-    sendMsg('창업/사업 방향으로 구체화하고 싶어. 실행 계획을 만들어줘.');
+    /* Generate Business Proposal */
+    currentModel='business_proposal';
+    addMsg('ai','비즈니스 기획서를 생성하고 있어요... (본질 기반 + 분야별 맞춤형)');
+    generateDocument('business_proposal');
   }else if(action==='brand'){
-    sendMsg('브랜드 방향을 구체화하고 싶어. 브랜딩 가이드를 만들어줘.');
+    /* Generate Brand Guide */
+    currentModel='brand_guide';
+    addMsg('ai','브랜딩 가이드를 생성하고 있어요... (본질 기반 아이덴티티)');
+    generateDocument('brand_guide');
   }else if(action==='deep'){
-    sendMsg('더 깊이 분석하고 싶어. 상세 레포트를 만들어줘.');
+    /* Generate Essence Document */
+    currentModel='essence_document';
+    addMsg('ai','상세 Essence Document를 생성하고 있어요... (1500-2500 단어)');
+    generateDocument('essence_document');
     /* TODO: Trigger payment modal */
   }else if(action==='save'){
     alert('대화가 자동 저장되었습니다. Unmask 프로필에서 확인하세요!');
   }
+}
+
+/* GENERATE DOCUMENT */
+function generateDocument(mode){
+  var contextMsg='대화 내용:\n'+conversationHistory.slice(-10).map(function(m){return (m.role==='user'?'나':'AI')+': '+m.content}).join('\n\n');
+
+  callClaude(mode,[{role:'user',content:contextMsg}],4000).then(function(doc){
+    addMsg('ai',doc);
+    /* Download as markdown */
+    var blob=new Blob([doc],{type:'text/markdown'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url;
+    a.download=mode.replace(/_/g,'-')+'.md';
+    a.click();
+  }).catch(function(err){
+    addMsg('ai','문서 생성 중 오류가 발생했어요: '+err.message);
+  });
 }
 
 /* BACKGROUND METADATA EXTRACTION */

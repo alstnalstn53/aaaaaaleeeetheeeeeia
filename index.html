@@ -363,6 +363,12 @@ body.dark-mode .um-frag-line{color:#888}
 .cb-body{display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0;position:relative}
 .cb-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0}
 .cb-header-left{display:flex;align-items:center;gap:8px}
+.cb-header-center{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;max-width:200px;margin:0 auto}
+.cb-progress-info{display:flex;align-items:center;gap:8px;font-size:10px}
+.cb-turn-count{color:#999;font-weight:400}
+.cb-stage-name{color:#333;font-weight:500;padding:2px 8px;background:rgba(0,0,0,0.04);border-radius:8px}
+.cb-progress-bar{width:100%;height:3px;background:rgba(0,0,0,0.06);border-radius:2px;overflow:hidden}
+.cb-progress-fill{height:100%;background:linear-gradient(90deg,rgba(0,0,0,0.4),rgba(0,0,0,0.7));border-radius:2px;transition:width 0.5s ease;width:0}
 .cb-header-right{display:flex;align-items:center;gap:5px}
 .cb-header-logo{width:22px;height:22px;border-radius:6px;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center}
 .cb-header-logo svg{width:11px;height:11px;stroke:#fff;fill:none;stroke-width:1.5}
@@ -383,11 +389,66 @@ body.dark-mode .um-frag-line{color:#888}
 .cb-chip:hover{background:rgba(255,255,255,0.4);border-color:rgba(0,0,0,0.08);transform:translateY(-1px)}
 .cb-chip:active{transform:translateY(0) scale(0.95);transition:0.06s}
 
+/* Onboarding */
+.ob-step{display:none;flex-direction:column;align-items:center;padding:30px 20px;width:100%;max-width:480px;margin:0 auto}
+.ob-step.active{display:flex;animation:obFadeIn 0.6s ease}
+@keyframes obFadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.ob-progress{display:flex;gap:6px;margin-bottom:24px}
+.ob-dot{width:6px;height:6px;border-radius:50%;background:rgba(0,0,0,0.1);transition:0.3s}
+.ob-dot.active{background:#000;width:20px;border-radius:3px}
+.ob-dot.done{background:rgba(0,0,0,0.3)}
+.ob-title{font-size:18px;font-weight:500;color:#000;margin-bottom:6px;text-align:center}
+.ob-subtitle{font-size:12px;color:#999;margin-bottom:24px;text-align:center;font-weight:400}
+.ob-options{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%}
+.ob-option{display:flex;flex-direction:column;align-items:center;padding:20px 16px;border:1px solid rgba(0,0,0,0.06);border-radius:12px;background:rgba(255,255,255,0.3);backdrop-filter:blur(10px);cursor:pointer;transition:0.25s;font-family:inherit;text-align:center}
+.ob-option:hover{background:rgba(255,255,255,0.5);border-color:rgba(0,0,0,0.12);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.04)}
+.ob-option:active{transform:translateY(0) scale(0.98);transition:0.08s}
+.ob-option-icon{font-size:28px;margin-bottom:10px}
+.ob-option-label{font-size:13px;font-weight:500;color:#111;margin-bottom:4px}
+.ob-option-desc{font-size:10px;color:#888;font-weight:400;line-height:1.4}
+.ob-option:nth-child(5){grid-column:1/-1;max-width:280px;margin:0 auto;width:100%}
+.ob-input-group{width:100%;margin-bottom:20px}
+.ob-input{width:100%;padding:12px 16px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;background:rgba(255,255,255,0.4);font-size:13px;color:#111;font-family:inherit;transition:0.2s;outline:none}
+.ob-input:focus{border-color:rgba(0,0,0,0.2);background:rgba(255,255,255,0.6)}
+.ob-input::placeholder{color:#aaa}
+.ob-quick-picks{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.ob-qp{padding:6px 12px;border-radius:12px;font-size:11px;color:#666;background:rgba(255,255,255,0.25);border:1px solid rgba(0,0,0,0.04);cursor:pointer;transition:0.2s;font-family:inherit}
+.ob-qp:hover{background:rgba(255,255,255,0.5);border-color:rgba(0,0,0,0.1)}
+.ob-qp:active{transform:scale(0.95);transition:0.06s}
+.ob-nav{display:flex;gap:10px;width:100%;margin-top:10px}
+.ob-btn{flex:1;padding:12px 20px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;transition:0.25s;font-family:inherit;border:1px solid rgba(0,0,0,0.08)}
+.ob-btn-back{background:rgba(255,255,255,0.3);color:#666}
+.ob-btn-back:hover{background:rgba(255,255,255,0.5);border-color:rgba(0,0,0,0.15)}
+.ob-btn-next,.ob-btn-start{background:rgba(0,0,0,0.85);color:#fff;border-color:rgba(0,0,0,0.9)}
+.ob-btn-next:hover,.ob-btn-start:hover{background:#000;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+.ob-btn:active{transform:translateY(0) scale(0.97);transition:0.08s}
+.ob-summary{width:100%;background:rgba(255,255,255,0.35);border:1px solid rgba(0,0,0,0.06);border-radius:12px;padding:16px;margin-bottom:16px}
+.ob-summary-item{font-size:12px;color:#444;margin-bottom:8px;line-height:1.6}
+.ob-summary-item:last-child{margin-bottom:0}
+.ob-summary-item strong{font-weight:600;color:#000;margin-right:6px}
+
+/* Next Step Card */
+.next-step-card{display:none;background:rgba(255,255,255,0.45);backdrop-filter:blur(20px);border:1px solid rgba(0,0,0,0.08);border-radius:16px;padding:20px;margin:20px 0;animation:fadeInUp 0.6s ease}
+.next-step-card.show{display:block}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+.nsc-title{font-size:15px;font-weight:600;color:#000;margin-bottom:6px;text-align:center}
+.nsc-subtitle{font-size:11px;color:#888;margin-bottom:18px;text-align:center;line-height:1.5}
+.nsc-options{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.nsc-option{display:flex;flex-direction:column;align-items:center;padding:16px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:12px;background:rgba(255,255,255,0.35);cursor:pointer;transition:0.25s;text-align:center}
+.nsc-option:hover{background:rgba(255,255,255,0.6);border-color:rgba(0,0,0,0.15);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.06)}
+.nsc-option:active{transform:translateY(0) scale(0.98);transition:0.08s}
+.nsc-option-icon{font-size:24px;margin-bottom:8px}
+.nsc-option-label{font-size:12px;font-weight:500;color:#111;margin-bottom:4px}
+.nsc-option-desc{font-size:9px;color:#888;line-height:1.3}
+.nsc-option.premium{position:relative;border-color:rgba(0,0,0,0.12)}
+.nsc-option.premium::after{content:'PRO';position:absolute;top:6px;right:6px;font-size:8px;font-weight:700;color:#fff;background:linear-gradient(135deg,#000,#333);padding:2px 6px;border-radius:4px;letter-spacing:0.05em}
+
 /* Msg Bubbles */
 .msg{display:flex;gap:10px;animation:msgIn 0.4s ease;position:relative}
 .msg.msg-right{flex-direction:row-reverse}
 .msg.msg-right .msg-body{text-align:right;display:flex;flex-direction:column;align-items:flex-end}
 .msg.msg-right .msg-text{background:rgba(255,255,255,0.45);display:inline-block;padding:10px 14px;border-radius:14px 14px 4px 14px;text-align:left;width:fit-content;max-width:85%;border:1px solid rgba(0,0,0,0.04)}
+.msg-text .quote{background:rgba(0,0,0,0.04);padding:2px 6px;border-radius:4px;font-style:italic;color:#555;border-left:2px solid rgba(0,0,0,0.2);margin:0 2px;display:inline}
 .msg:not(.msg-right) .msg-body{display:flex;flex-direction:column;align-items:flex-start}
 .msg:not(.msg-right) .msg-text{background:rgba(255,255,255,0.38);padding:10px 14px;border-radius:14px 14px 14px 4px;border:1px solid rgba(0,0,0,0.04);width:fit-content;max-width:85%}
 @keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -1060,6 +1121,15 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
             <div class="cb-header-logo"><svg viewBox="0 0 24 24"><path d="M 5 19 A 10 10 0 1 1 19 19" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/></svg></div>
             <span class="cb-header-name" id="cbHeaderName">Aletheia Core</span>
           </div>
+          <div class="cb-header-center" id="cbProgress">
+            <div class="cb-progress-info">
+              <span class="cb-turn-count" id="cbTurnCount">0턴</span>
+              <span class="cb-stage-name" id="cbStageName">표면</span>
+            </div>
+            <div class="cb-progress-bar">
+              <div class="cb-progress-fill" id="cbProgressFill"></div>
+            </div>
+          </div>
           <div class="cb-header-right">
             <button class="cb-icon-btn" id="cbNewChat" title="새 대화"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
             <button class="cb-icon-btn" id="cbBookmarkList" title="북마크"><svg viewBox="0 0 24 24"><path d="M6 4h12a1 1 0 0 1 1 1v16l-7-4-7 4V5a1 1 0 0 1 1-1z"/></svg></button>
@@ -1134,7 +1204,86 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
           </div>
         </div>
         <div class="cb-msgs" id="cbMsgs">
-          <div class="cb-welcome" id="cbWelcome"><div class="cb-welcome-t">무엇이 당신을 이끄나요?</div><div class="cb-welcome-s">당신의 이야기에서 본질을 추출합니다.</div><div class="cb-chips"><span class="cb-chip" data-q="나는 카페를 하고 싶어">카페 창업</span><span class="cb-chip" data-q="내가 진짜 좋아하는게 뭔지 모르겠어">자기 탐구</span><span class="cb-chip" data-q="브랜드를 만들고 싶은데 방향을 모르겠어">브랜드 방향</span></div></div>
+          <div class="cb-welcome" id="cbWelcome">
+            <!-- Onboarding Step 1: 목적 선택 -->
+            <div class="ob-step active" id="obStep1">
+              <div class="ob-progress"><span class="ob-dot active"></span><span class="ob-dot"></span><span class="ob-dot"></span></div>
+              <div class="ob-title">무엇을 알러 오셨나요?</div>
+              <div class="ob-subtitle">선택하시면 맞춤형 대화가 시작됩니다</div>
+              <div class="ob-options">
+                <button class="ob-option" data-purpose="career">
+                  <div class="ob-option-icon">💼</div>
+                  <div class="ob-option-label">직업 / 커리어</div>
+                  <div class="ob-option-desc">전환, 방향 찾기</div>
+                </button>
+                <button class="ob-option" data-purpose="study">
+                  <div class="ob-option-icon">🎓</div>
+                  <div class="ob-option-label">전공 / 학업</div>
+                  <div class="ob-option-desc">진로 고민, 적성 탐색</div>
+                </button>
+                <button class="ob-option" data-purpose="hobby">
+                  <div class="ob-option-icon">❤️</div>
+                  <div class="ob-option-label">취향 / 취미</div>
+                  <div class="ob-option-desc">사업화, 수익화</div>
+                </button>
+                <button class="ob-option" data-purpose="creator">
+                  <div class="ob-option-icon">🎬</div>
+                  <div class="ob-option-label">크리에이터</div>
+                  <div class="ob-option-desc">콘텐츠 방향 찾기</div>
+                </button>
+                <button class="ob-option" data-purpose="unsure">
+                  <div class="ob-option-icon">🤔</div>
+                  <div class="ob-option-label">잘 모르겠어요</div>
+                  <div class="ob-option-desc">탐색부터 시작</div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Onboarding Step 2: 구체적 정보 -->
+            <div class="ob-step" id="obStep2">
+              <div class="ob-progress"><span class="ob-dot done"></span><span class="ob-dot active"></span><span class="ob-dot"></span></div>
+              <div class="ob-title" id="obStep2Title">조금 더 구체적으로 알려주세요</div>
+              <div class="ob-subtitle" id="obStep2Subtitle">자유롭게 작성하거나 선택해주세요</div>
+
+              <!-- Career/Study 입력 -->
+              <div class="ob-input-group" id="obCareerGroup" style="display:none">
+                <input type="text" class="ob-input" id="obCareerInput" placeholder="예: 마케팅, 개발자, 디자이너...">
+                <div class="ob-quick-picks" id="obCareerPicks"></div>
+              </div>
+
+              <!-- Hobby 입력 -->
+              <div class="ob-input-group" id="obHobbyGroup" style="display:none">
+                <input type="text" class="ob-input" id="obHobbyInput" placeholder="예: 커피, 베이킹, 향수, 목공...">
+                <div class="ob-quick-picks" id="obHobbyPicks"></div>
+              </div>
+
+              <!-- Creator 입력 -->
+              <div class="ob-input-group" id="obCreatorGroup" style="display:none">
+                <input type="text" class="ob-input" id="obCreatorInput" placeholder="예: 브이로그, 리뷰, 일상, 교육...">
+                <div class="ob-quick-picks" id="obCreatorPicks"></div>
+              </div>
+
+              <div class="ob-nav">
+                <button class="ob-btn ob-btn-back" id="obBack1">← 이전</button>
+                <button class="ob-btn ob-btn-next" id="obNext1">다음 →</button>
+              </div>
+            </div>
+
+            <!-- Onboarding Step 3: 시작 확인 -->
+            <div class="ob-step" id="obStep3">
+              <div class="ob-progress"><span class="ob-dot done"></span><span class="ob-dot done"></span><span class="ob-dot active"></span></div>
+              <div class="ob-title">준비되었습니다</div>
+              <div class="ob-summary" id="obSummary">
+                <div class="ob-summary-item"><strong>목적:</strong> <span id="obSummaryPurpose"></span></div>
+                <div class="ob-summary-item"><strong>분야:</strong> <span id="obSummaryDetail"></span></div>
+              </div>
+              <div class="ob-subtitle">대화를 시작하면 당신의 본질을 찾아갑니다</div>
+              <div class="ob-nav">
+                <button class="ob-btn ob-btn-back" id="obBack2">← 수정</button>
+                <button class="ob-btn ob-btn-start" id="obStart">대화 시작하기 →</button>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="cb-input">
           <div class="cb-model-row"><div class="cb-model" id="cbModel"><span class="dot" style="background:#000"></span><span class="model-name">Core</span><svg class="arr" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div></div>
@@ -1806,6 +1955,111 @@ async function callClaude(mode,history,maxTokens){
   throw new Error('Empty response');
 }
 
+/* UPDATE CHAT PROGRESS */
+function updateChatProgress(){
+  var turnCount=Math.floor(conversationHistory.length/2);
+  var stage='표면';
+  var progress=0;
+
+  /* Determine stage based on turn count */
+  if(turnCount>=15){
+    stage='Essence';
+    progress=100;
+  }else if(turnCount>=10){
+    stage='동기';
+    progress=80;
+  }else if(turnCount>=6){
+    stage='가치관';
+    progress=60;
+  }else if(turnCount>=3){
+    stage='패턴';
+    progress=40;
+  }else{
+    stage='표면';
+    progress=20+(turnCount*6);
+  }
+
+  /* Update UI */
+  var turnEl=document.getElementById('cbTurnCount');
+  var stageEl=document.getElementById('cbStageName');
+  var fillEl=document.getElementById('cbProgressFill');
+
+  if(turnEl)turnEl.textContent=turnCount+'턴';
+  if(stageEl)stageEl.textContent=stage;
+  if(fillEl)fillEl.style.width=progress+'%';
+
+  /* Show next step card at 10-12 turns */
+  if(turnCount>=10&&turnCount<=12&&!document.getElementById('nextStepCard')){
+    showNextStepCard();
+  }
+}
+
+/* SHOW NEXT STEP CARD */
+var nextStepShown=false;
+function showNextStepCard(){
+  if(nextStepShown)return;
+  nextStepShown=true;
+
+  var card=document.createElement('div');
+  card.id='nextStepCard';
+  card.className='next-step-card';
+  card.innerHTML=`
+    <div class="nsc-title">여기까지 꽤 많이 보이는데</div>
+    <div class="nsc-subtitle">이제 어떻게 하고 싶어?</div>
+    <div class="nsc-options">
+      <div class="nsc-option" data-action="business">
+        <div class="nsc-option-icon">🚀</div>
+        <div class="nsc-option-label">창업 / 사업</div>
+        <div class="nsc-option-desc">구체적인 실행 계획</div>
+      </div>
+      <div class="nsc-option" data-action="brand">
+        <div class="nsc-option-icon">🎨</div>
+        <div class="nsc-option-label">브랜드 방향</div>
+        <div class="nsc-option-desc">브랜딩 가이드</div>
+      </div>
+      <div class="nsc-option premium" data-action="deep">
+        <div class="nsc-option-icon">📊</div>
+        <div class="nsc-option-label">심화 분석</div>
+        <div class="nsc-option-desc">상세 레포트</div>
+      </div>
+      <div class="nsc-option" data-action="save">
+        <div class="nsc-option-icon">💾</div>
+        <div class="nsc-option-label">저장하고 종료</div>
+        <div class="nsc-option-desc">나중에 이어하기</div>
+      </div>
+    </div>
+  `;
+
+  var msgs=document.getElementById('cbMsgs');
+  msgs.appendChild(card);
+  setTimeout(function(){card.classList.add('show')},100);
+  msgs.scrollTop=msgs.scrollHeight;
+
+  /* Attach click handlers */
+  card.querySelectorAll('.nsc-option').forEach(function(opt){
+    opt.addEventListener('click',function(){
+      var action=opt.getAttribute('data-action');
+      handleNextStepAction(action);
+    });
+  });
+}
+
+function handleNextStepAction(action){
+  var card=document.getElementById('nextStepCard');
+  if(card)card.remove();
+
+  if(action==='business'){
+    sendMsg('창업/사업 방향으로 구체화하고 싶어. 실행 계획을 만들어줘.');
+  }else if(action==='brand'){
+    sendMsg('브랜드 방향을 구체화하고 싶어. 브랜딩 가이드를 만들어줘.');
+  }else if(action==='deep'){
+    sendMsg('더 깊이 분석하고 싶어. 상세 레포트를 만들어줘.');
+    /* TODO: Trigger payment modal */
+  }else if(action==='save'){
+    alert('대화가 자동 저장되었습니다. Unmask 프로필에서 확인하세요!');
+  }
+}
+
 /* BACKGROUND METADATA EXTRACTION */
 function extractMetaFromConversation(){
   if(conversationHistory.length<2)return;
@@ -1889,6 +2143,8 @@ function sendMsg(t){
     typ.remove();addMsg('ai',aiResp);
     currentSessionMsgs.push({role:'ai',type:'text',text:aiResp});
     conversationHistory.push({role:'assistant',content:aiResp});
+    /* Update progress bar */
+    updateChatProgress();
     /* Background: extract metadata for Unmask every 2 turns */
     if(conversationHistory.length%4===0||conversationHistory.length===2){
       extractMetaFromConversation();
@@ -2143,6 +2399,164 @@ ta.addEventListener('input',function(){ta.style.height='auto';ta.style.height=Ma
 ta.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg(ta.value)}});
 sendBtn.addEventListener('click',function(){sendMsg(ta.value)});
 document.querySelectorAll('.cb-chip').forEach(function(c){c.addEventListener('click',function(){sendMsg(c.getAttribute('data-q'))})});
+
+/* ONBOARDING */
+var onboardingData={purpose:'',detail:'',customInput:''};
+var currentObStep=1;
+
+/* Quick picks data */
+var quickPicks={
+  career:['마케팅','개발자','디자이너','기획자','창업','컨설턴트'],
+  study:['경영학','디자인','공학','인문학','예술','IT/컴퓨터'],
+  hobby:['커피/카페','베이킹','향수','목공','도자기','그림/드로잉'],
+  creator:['브이로그','리뷰','일상','교육/강의','요리','취미 공유']
+};
+
+/* Purpose labels */
+var purposeLabels={
+  career:'직업 / 커리어',
+  study:'전공 / 학업',
+  hobby:'취향 / 취미',
+  creator:'크리에이터',
+  unsure:'탐색'
+};
+
+function showObStep(step){
+  document.querySelectorAll('.ob-step').forEach(function(s){s.classList.remove('active')});
+  document.getElementById('obStep'+step).classList.add('active');
+  currentObStep=step;
+}
+
+/* Step 1: Purpose selection */
+document.querySelectorAll('.ob-option').forEach(function(opt){
+  opt.addEventListener('click',function(){
+    var purpose=opt.getAttribute('data-purpose');
+    onboardingData.purpose=purpose;
+
+    /* Prepare Step 2 based on purpose */
+    var title=document.getElementById('obStep2Title');
+    var subtitle=document.getElementById('obStep2Subtitle');
+    var careerGroup=document.getElementById('obCareerGroup');
+    var hobbyGroup=document.getElementById('obHobbyGroup');
+    var creatorGroup=document.getElementById('obCreatorGroup');
+
+    /* Hide all input groups */
+    careerGroup.style.display='none';
+    hobbyGroup.style.display='none';
+    creatorGroup.style.display='none';
+
+    if(purpose==='unsure'){
+      /* Skip to step 3 directly */
+      onboardingData.detail='자유 탐색';
+      updateObSummary();
+      showObStep(3);
+      return;
+    }
+
+    /* Show appropriate input group */
+    if(purpose==='career'){
+      title.textContent='어떤 분야인가요?';
+      subtitle.textContent='현재 직업, 관심 분야, 또는 전환하고 싶은 분야';
+      careerGroup.style.display='block';
+      renderQuickPicks('obCareerPicks','career');
+    }else if(purpose==='study'){
+      title.textContent='무엇을 공부하시나요?';
+      subtitle.textContent='전공, 또는 관심있는 학문 분야';
+      careerGroup.style.display='block';
+      renderQuickPicks('obCareerPicks','study');
+    }else if(purpose==='hobby'){
+      title.textContent='어떤 취향/취미인가요?';
+      subtitle.textContent='좋아하는 것, 시간 가는 줄 모르고 하는 것';
+      hobbyGroup.style.display='block';
+      renderQuickPicks('obHobbyPicks','hobby');
+    }else if(purpose==='creator'){
+      title.textContent='어떤 콘텐츠를 만드시나요?';
+      subtitle.textContent='현재 하고 있거나, 만들고 싶은 콘텐츠';
+      creatorGroup.style.display='block';
+      renderQuickPicks('obCreatorPicks','creator');
+    }
+
+    showObStep(2);
+  });
+});
+
+function renderQuickPicks(containerId,category){
+  var container=document.getElementById(containerId);
+  container.innerHTML='';
+  var picks=quickPicks[category]||[];
+  picks.forEach(function(pick){
+    var btn=document.createElement('span');
+    btn.className='ob-qp';
+    btn.textContent=pick;
+    btn.addEventListener('click',function(){
+      var inputId=containerId.replace('Picks','Input');
+      document.getElementById(inputId).value=pick;
+    });
+    container.appendChild(btn);
+  });
+}
+
+/* Step 2 Navigation */
+document.getElementById('obBack1').addEventListener('click',function(){showObStep(1)});
+document.getElementById('obNext1').addEventListener('click',function(){
+  var purpose=onboardingData.purpose;
+  var inputVal='';
+
+  if(purpose==='career'||purpose==='study'){
+    inputVal=document.getElementById('obCareerInput').value.trim();
+  }else if(purpose==='hobby'){
+    inputVal=document.getElementById('obHobbyInput').value.trim();
+  }else if(purpose==='creator'){
+    inputVal=document.getElementById('obCreatorInput').value.trim();
+  }
+
+  if(!inputVal){
+    alert('내용을 입력하거나 선택해주세요');
+    return;
+  }
+
+  onboardingData.detail=inputVal;
+  updateObSummary();
+  showObStep(3);
+});
+
+/* Step 3 Navigation */
+document.getElementById('obBack2').addEventListener('click',function(){showObStep(2)});
+document.getElementById('obStart').addEventListener('click',function(){
+  startConversationWithContext();
+});
+
+function updateObSummary(){
+  document.getElementById('obSummaryPurpose').textContent=purposeLabels[onboardingData.purpose]||onboardingData.purpose;
+  document.getElementById('obSummaryDetail').textContent=onboardingData.detail||'미정';
+}
+
+function startConversationWithContext(){
+  /* Hide onboarding, show chat */
+  chatStarted=true;
+  welcome.classList.add('hidden');
+
+  /* Generate context-aware first message */
+  var contextMsg=generateContextMessage();
+  sendMsg(contextMsg);
+}
+
+function generateContextMessage(){
+  var p=onboardingData.purpose;
+  var d=onboardingData.detail;
+
+  if(p==='career'){
+    return '나는 '+d+' 분야에서 일하고 있어요. (또는 관심있어요) 내 커리어 방향을 찾고 싶어요.';
+  }else if(p==='study'){
+    return '나는 '+d+'을/를 공부하고 있어요. 진로를 고민 중이에요.';
+  }else if(p==='hobby'){
+    return '나는 '+d+'에 관심이 많아요. 이걸 어떻게 발전시킬 수 있을까요?';
+  }else if(p==='creator'){
+    return '나는 '+d+' 콘텐츠를 만들고 싶어요. 어떤 방향이 좋을까요?';
+  }else{
+    return '나에 대해 탐색하고 싶어요. 어디서부터 시작해야 할까요?';
+  }
+}
 
 /* HERO – typing sequence */
 (function(){

@@ -78,7 +78,8 @@ nav{position:fixed;top:20px;left:50%;transform:translateX(-50%);width:98%;max-wi
 .hl-btn{padding:12px 28px;border:1px solid rgba(0,0,0,0.1);border-radius:30px;background:rgba(255,255,255,0.2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);font-size:11px;font-weight:600;letter-spacing:0.12em;color:#111;cursor:pointer;transition:all 0.3s;font-family:inherit}
 .hl-btn:hover{background:rgba(0,0,0,0.06);border-color:rgba(0,0,0,0.25);transform:translateY(-2px)}
 .hl-btn:active{transform:translateY(0) scale(0.96);transition:all 0.08s}
-.scroll-indicator{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;opacity:0;animation:scrollFade 3s ease-in-out infinite}
+.scroll-indicator{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;opacity:0;transition:opacity 1.5s ease}
+.scroll-indicator.visible{animation:scrollFade 3s ease-in-out infinite}
 @keyframes scrollFade{0%,100%{opacity:0.3}50%{opacity:1}}
 .scroll-icon{width:24px;height:36px;border:2px solid rgba(0,0,0,0.2);border-radius:12px;position:relative;display:flex;justify-content:center;padding-top:6px}
 .scroll-wheel{width:3px;height:6px;background:rgba(0,0,0,0.3);border-radius:2px;animation:scrollWheel 2s ease-in-out infinite}
@@ -2653,10 +2654,11 @@ function generateContextMessage(){
     if(newText)text=newText;
     i=0;el.innerHTML='<span class="cursor"></span>';
     var sub=document.getElementById('hlSubtitle');
-    logo.classList.remove('visible');if(sub)sub.classList.remove('visible');btns.classList.remove('visible');
+    var scrollInd=document.querySelector('.scroll-indicator');
+    logo.classList.remove('visible');if(sub)sub.classList.remove('visible');btns.classList.remove('visible');if(scrollInd)scrollInd.classList.remove('visible');
     (function type(){
       if(i<text.length){el.innerHTML=text.substring(0,i+1)+'<span class="cursor"></span>';i++;setTimeout(type,60+Math.random()*70)}
-      else{setTimeout(function(){el.innerHTML=text;logo.classList.add('visible');if(sub)sub.classList.add('visible');btns.classList.add('visible')},800)}
+      else{setTimeout(function(){el.innerHTML=text;logo.classList.add('visible');if(sub)sub.classList.add('visible');btns.classList.add('visible');setTimeout(function(){if(scrollInd)scrollInd.classList.add('visible')},1000)},800)}
     })();
   };
   setTimeout(function(){
@@ -2667,13 +2669,18 @@ function generateContextMessage(){
         var speed=60+Math.random()*70;
         setTimeout(type,speed);
       } else {
-        /* typing done → show logo + subtitle + buttons */
+        /* typing done → show logo + subtitle + buttons + scroll indicator */
         setTimeout(function(){
           el.innerHTML=text;
           logo.classList.add('visible');
           var sub=document.getElementById('hlSubtitle');
           if(sub)sub.classList.add('visible');
           btns.classList.add('visible');
+          /* Show scroll indicator after 1s */
+          setTimeout(function(){
+            var scrollInd=document.querySelector('.scroll-indicator');
+            if(scrollInd)scrollInd.classList.add('visible');
+          },1000);
         },800);
       }
     })();
@@ -2865,9 +2872,10 @@ document.querySelectorAll('.typing-target').forEach(function(el){typingObs.obser
   });
 })();
 
-/* SCROLL PARALLAX */
+/* SCROLL PARALLAX + HIDE SCROLL INDICATOR */
 var aboutPage=document.getElementById('page-about');
-if(aboutPage){aboutPage.addEventListener('scroll',function(){var st=aboutPage.scrollTop,vh=window.innerHeight,progress=Math.min(st/(vh*0.5),1);var logo=document.getElementById('hlLogo');var bottom=document.querySelector('.hl-bottom');if(logo){logo.style.opacity=Math.max(1-progress*1.5,0);logo.style.transform='translateY('+-st*0.3+'px)'}if(bottom){bottom.style.opacity=Math.max(1-progress*1.5,0);bottom.style.transform='translateY('+-st*0.2+'px)'}})}
+var scrollIndHidden=false;
+if(aboutPage){aboutPage.addEventListener('scroll',function(){var st=aboutPage.scrollTop,vh=window.innerHeight,progress=Math.min(st/(vh*0.5),1);var logo=document.getElementById('hlLogo');var bottom=document.querySelector('.hl-bottom');if(logo){logo.style.opacity=Math.max(1-progress*1.5,0);logo.style.transform='translateY('+-st*0.3+'px)'}if(bottom){bottom.style.opacity=Math.max(1-progress*1.5,0);bottom.style.transform='translateY('+-st*0.2+'px)'}if(!scrollIndHidden&&st>10){var scrollInd=document.querySelector('.scroll-indicator');if(scrollInd){scrollInd.style.opacity='0';scrollInd.style.pointerEvents='none';scrollIndHidden=true}}})}
 
 /* ESC */
 window.addEventListener('keydown',function(e){if(e.key==='Escape'){document.querySelectorAll('.modal-overlay.show').forEach(function(m){closeModal(m.id)});collapseChat()}});

@@ -430,6 +430,8 @@ body.dark-mode .um-frag-line{color:#888}
 .cb-chip{padding:7px 14px;border-radius:16px;font-size:11px;color:#555;background:rgba(255,255,255,0.2);border:1px solid rgba(0,0,0,0.03);cursor:pointer;transition:0.25s;font-family:inherit;font-weight:400}
 .cb-chip:hover{background:rgba(255,255,255,0.4);border-color:rgba(0,0,0,0.08);transform:translateY(-1px)}
 .cb-chip:active{transform:translateY(0) scale(0.95);transition:0.06s}
+.cb-input.locked{opacity:0.35;pointer-events:none;user-select:none}
+.cb-input.locked .cb-ta{cursor:default}
 
 /* Onboarding */
 .ob-step{display:none;flex-direction:column;align-items:center;padding:30px 20px;width:100%;max-width:480px;margin:0 auto}
@@ -1366,9 +1368,9 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
             </div>
           </div>
         </div>
-        <div class="cb-input">
+        <div class="cb-input locked" id="cbInputArea">
           <div class="cb-model-row"><div class="cb-model" id="cbModel"><span class="dot" style="background:#000"></span><span class="model-name">Core</span><svg class="arr" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div></div>
-          <div class="cb-input-row"><button class="cb-attach" id="cbAttach" title="파일 첨부"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button><textarea class="cb-ta" id="cbTa" placeholder="대화를 시작하세요..." rows="1"></textarea><button class="cb-send" id="cbSend"><svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></button></div>
+          <div class="cb-input-row"><button class="cb-attach" id="cbAttach" title="파일 첨부"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button><textarea class="cb-ta" id="cbTa" placeholder="위에서 모드를 선택해주세요" rows="1" disabled></textarea><button class="cb-send" id="cbSend"><svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></button></div>
         </div>
       </div>
       <div class="cb-bar" id="cbBar"><span class="cb-ph"><span class="cb-caret"></span>대화를 시작하세요...</span></div>
@@ -1983,10 +1985,17 @@ document.getElementById('cbNewChat').addEventListener('click',function(){
   document.getElementById('umSecValues').className='cbp-section locked';
   document.getElementById('umSecAvoid').className='cbp-section locked';
   document.getElementById('umSecMotiv').className='cbp-section locked';
-  var w=document.createElement('div');w.id='cbWelcome';w.className='cb-welcome';
-  w.innerHTML='<div class="cb-welcome-t">무엇이 당신을 이끄나요?</div><div class="cb-welcome-s">당신의 이야기에서 본질을 추출합니다.</div><div class="cb-chips"><span class="cb-chip" data-q="나는 카페를 하고 싶어">카페 창업</span><span class="cb-chip" data-q="내가 진짜 좋아하는게 뭔지 모르겠어">자기 탐구</span><span class="cb-chip" data-q="브랜드를 만들고 싶은데 방향을 모르겠어">브랜드 방향</span></div>';
+  /* Re-lock input */
+  onboardingDone=false;
+  onboardingData={purpose:'',detail:'',customInput:''};
+  var inputArea=document.getElementById('cbInputArea');
+  if(inputArea)inputArea.classList.add('locked');
+  var ta2=document.getElementById('cbTa');
+  if(ta2){ta2.disabled=true;ta2.placeholder='위에서 모드를 선택해주세요';}
+  /* Restore full onboarding */
+  var w=obCache.cloneNode(true);
   document.getElementById('cbMsgs').appendChild(w);
-  w.querySelectorAll('.cb-chip').forEach(function(c){c.addEventListener('click',function(){sendMsg(c.getAttribute('data-q'))})});
+  bindOnboarding();
   welcome=w;currentSessionMsgs=[];
 });
 
@@ -2330,6 +2339,7 @@ function sendMsg(t){
   var hasText=t&&t.trim();
   var hasFile=!!pendingFile;
   if(!hasText&&!hasFile)return;
+  if(!onboardingDone)return;
   if(hasText)t=t.trim();
   if(!chatStarted){chatStarted=true;welcome.classList.add('hidden')}
   if(!box.classList.contains('expanded'))expandChat();
@@ -2667,6 +2677,7 @@ function printConversation(){
 
 /* ONBOARDING */
 var onboardingData={purpose:'',detail:'',customInput:''};
+var onboardingDone=false;
 var currentObStep=1;
 
 /* Quick picks data */
@@ -2692,58 +2703,78 @@ function showObStep(step){
   currentObStep=step;
 }
 
-/* Step 1: Purpose selection */
-document.querySelectorAll('.ob-option').forEach(function(opt){
-  opt.addEventListener('click',function(){
-    var purpose=opt.getAttribute('data-purpose');
-    onboardingData.purpose=purpose;
+/* Cache onboarding HTML for New Chat restore */
+var obCache=document.getElementById('cbWelcome').cloneNode(true);
 
-    /* Prepare Step 2 based on purpose */
-    var title=document.getElementById('obStep2Title');
-    var subtitle=document.getElementById('obStep2Subtitle');
-    var careerGroup=document.getElementById('obCareerGroup');
-    var hobbyGroup=document.getElementById('obHobbyGroup');
-    var creatorGroup=document.getElementById('obCreatorGroup');
-
-    /* Hide all input groups */
-    careerGroup.style.display='none';
-    hobbyGroup.style.display='none';
-    creatorGroup.style.display='none';
-
-    if(purpose==='unsure'){
-      /* Skip to step 3 directly */
-      onboardingData.detail='자유 탐색';
-      updateObSummary();
-      showObStep(3);
-      return;
-    }
-
-    /* Show appropriate input group */
-    if(purpose==='career'){
-      title.textContent='어떤 분야인가요?';
-      subtitle.textContent='현재 직업, 관심 분야, 또는 전환하고 싶은 분야';
-      careerGroup.style.display='block';
-      renderQuickPicks('obCareerPicks','career');
-    }else if(purpose==='study'){
-      title.textContent='무엇을 공부하시나요?';
-      subtitle.textContent='전공, 또는 관심있는 학문 분야';
-      careerGroup.style.display='block';
-      renderQuickPicks('obCareerPicks','study');
-    }else if(purpose==='hobby'){
-      title.textContent='어떤 취향/취미인가요?';
-      subtitle.textContent='좋아하는 것, 시간 가는 줄 모르고 하는 것';
-      hobbyGroup.style.display='block';
-      renderQuickPicks('obHobbyPicks','hobby');
-    }else if(purpose==='creator'){
-      title.textContent='어떤 콘텐츠를 만드시나요?';
-      subtitle.textContent='현재 하고 있거나, 만들고 싶은 콘텐츠';
-      creatorGroup.style.display='block';
-      renderQuickPicks('obCreatorPicks','creator');
-    }
-
-    showObStep(2);
+function bindOnboarding(){
+  /* Step 1: Purpose selection */
+  document.querySelectorAll('.ob-option').forEach(function(opt){
+    opt.addEventListener('click',function(){
+      var purpose=opt.getAttribute('data-purpose');
+      onboardingData.purpose=purpose;
+      var title=document.getElementById('obStep2Title');
+      var subtitle=document.getElementById('obStep2Subtitle');
+      var careerGroup=document.getElementById('obCareerGroup');
+      var hobbyGroup=document.getElementById('obHobbyGroup');
+      var creatorGroup=document.getElementById('obCreatorGroup');
+      careerGroup.style.display='none';
+      hobbyGroup.style.display='none';
+      creatorGroup.style.display='none';
+      if(purpose==='unsure'){
+        onboardingData.detail='자유 탐색';
+        updateObSummary();
+        showObStep(3);
+        return;
+      }
+      if(purpose==='career'){
+        title.textContent='어떤 분야인가요?';
+        subtitle.textContent='현재 직업, 관심 분야, 또는 전환하고 싶은 분야';
+        careerGroup.style.display='block';
+        renderQuickPicks('obCareerPicks','career');
+      }else if(purpose==='study'){
+        title.textContent='무엇을 공부하시나요?';
+        subtitle.textContent='전공, 또는 관심있는 학문 분야';
+        careerGroup.style.display='block';
+        renderQuickPicks('obCareerPicks','study');
+      }else if(purpose==='hobby'){
+        title.textContent='어떤 취향/취미인가요?';
+        subtitle.textContent='좋아하는 것, 시간 가는 줄 모르고 하는 것';
+        hobbyGroup.style.display='block';
+        renderQuickPicks('obHobbyPicks','hobby');
+      }else if(purpose==='creator'){
+        title.textContent='어떤 콘텐츠를 만드시나요?';
+        subtitle.textContent='현재 하고 있거나, 만들고 싶은 콘텐츠';
+        creatorGroup.style.display='block';
+        renderQuickPicks('obCreatorPicks','creator');
+      }
+      showObStep(2);
+    });
   });
-});
+  /* Step 2 Navigation */
+  var back1=document.getElementById('obBack1');
+  var next1=document.getElementById('obNext1');
+  if(back1)back1.addEventListener('click',function(){showObStep(1)});
+  if(next1)next1.addEventListener('click',function(){
+    var purpose=onboardingData.purpose;
+    var inputVal='';
+    if(purpose==='career'||purpose==='study'){
+      inputVal=document.getElementById('obCareerInput').value.trim();
+    }else if(purpose==='hobby'){
+      inputVal=document.getElementById('obHobbyInput').value.trim();
+    }else if(purpose==='creator'){
+      inputVal=document.getElementById('obCreatorInput').value.trim();
+    }
+    if(!inputVal){alert('내용을 입력하거나 선택해주세요');return;}
+    onboardingData.detail=inputVal;
+    updateObSummary();
+    showObStep(3);
+  });
+  /* Step 3 Navigation */
+  var back2=document.getElementById('obBack2');
+  var start=document.getElementById('obStart');
+  if(back2)back2.addEventListener('click',function(){showObStep(2)});
+  if(start)start.addEventListener('click',function(){startConversationWithContext()});
+}
 
 function renderQuickPicks(containerId,category){
   var container=document.getElementById(containerId);
@@ -2761,35 +2792,8 @@ function renderQuickPicks(containerId,category){
   });
 }
 
-/* Step 2 Navigation */
-document.getElementById('obBack1').addEventListener('click',function(){showObStep(1)});
-document.getElementById('obNext1').addEventListener('click',function(){
-  var purpose=onboardingData.purpose;
-  var inputVal='';
-
-  if(purpose==='career'||purpose==='study'){
-    inputVal=document.getElementById('obCareerInput').value.trim();
-  }else if(purpose==='hobby'){
-    inputVal=document.getElementById('obHobbyInput').value.trim();
-  }else if(purpose==='creator'){
-    inputVal=document.getElementById('obCreatorInput').value.trim();
-  }
-
-  if(!inputVal){
-    alert('내용을 입력하거나 선택해주세요');
-    return;
-  }
-
-  onboardingData.detail=inputVal;
-  updateObSummary();
-  showObStep(3);
-});
-
-/* Step 3 Navigation */
-document.getElementById('obBack2').addEventListener('click',function(){showObStep(2)});
-document.getElementById('obStart').addEventListener('click',function(){
-  startConversationWithContext();
-});
+/* Initial bind */
+bindOnboarding();
 
 function updateObSummary(){
   document.getElementById('obSummaryPurpose').textContent=purposeLabels[onboardingData.purpose]||onboardingData.purpose;
@@ -2797,6 +2801,13 @@ function updateObSummary(){
 }
 
 function startConversationWithContext(){
+  /* Unlock input */
+  onboardingDone=true;
+  var inputArea=document.getElementById('cbInputArea');
+  if(inputArea)inputArea.classList.remove('locked');
+  var ta2=document.getElementById('cbTa');
+  if(ta2){ta2.disabled=false;ta2.placeholder='대화를 시작하세요...';}
+
   /* Hide onboarding, show chat */
   chatStarted=true;
   welcome.classList.add('hidden');

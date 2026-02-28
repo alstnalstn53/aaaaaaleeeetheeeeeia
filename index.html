@@ -3367,11 +3367,11 @@ function createDataTex(data){var t=new THREE.DataTexture(data,SIZE,SIZE,THREE.RG
 
 /* 초기 위치 — 넓게 분산 */
 var initPosData=new Float32Array(N*4);
-for(var i=0;i<N;i++){var phi=Math.acos(1-2*(i+0.5)/N);var theta=Math.PI*(1+Math.sqrt(5))*i;var R=120+Math.random()*180;initPosData[i*4]=Math.sin(phi)*Math.cos(theta)*R;initPosData[i*4+1]=Math.cos(phi)*R;initPosData[i*4+2]=Math.sin(phi)*Math.sin(theta)*R;initPosData[i*4+3]=Math.random()}
+for(var i=0;i<N;i++){var phi=Math.acos(1-2*(i+0.5)/N);var theta=Math.PI*(1+Math.sqrt(5))*i;var u=Math.random();var R=20+u*u*120;initPosData[i*4]=Math.sin(phi)*Math.cos(theta)*R;initPosData[i*4+1]=Math.cos(phi)*R;initPosData[i*4+2]=Math.sin(phi)*Math.sin(theta)*R;initPosData[i*4+3]=Math.random()}
 var initPosTex=createDataTex(initPosData);
 
 var silTargetData=new Float32Array(N*4);
-for(var _si=0;_si<N;_si++){silTargetData[_si*4]=(Math.random()-0.5)*300;silTargetData[_si*4+1]=(Math.random()-0.5)*200;silTargetData[_si*4+2]=(Math.random()-0.5)*80;silTargetData[_si*4+3]=-1.0}
+for(var _si=0;_si<N;_si++){var _u=Math.random();var _r=15+_u*_u*100;var _a=Math.random()*6.2831;var _b=Math.random()*3.1416;silTargetData[_si*4]=Math.sin(_b)*Math.cos(_a)*_r;silTargetData[_si*4+1]=Math.cos(_b)*_r*0.7;silTargetData[_si*4+2]=Math.sin(_b)*Math.sin(_a)*_r*0.4;silTargetData[_si*4+3]=-1.0}
 var silTargetTex=createDataTex(silTargetData);
 
 var rtOpts={minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter,format:THREE.RGBAFormat,type:THREE.FloatType};
@@ -3432,8 +3432,8 @@ var simFrag=[
 '  homePos=vec3(homePos.x*cR-homePos.z*sR,homePos.y,homePos.x*sR+homePos.z*cR);',
 '  vec3 curlP=pos*0.012;vec3 curl=curlNoise(curlP,uTime*0.15+seed*5.0);',
 '  vec3 posNorm=normalize(pos+0.001);vec3 tangentCurl=curl-posNorm*dot(curl,posNorm);',
-'  vec3 curlForce=tangentCurl*8.0*(1.0-mp);',
-'  vec3 homeForce=(homePos-pos)*0.05*(1.0-mp);',
+'  vec3 curlForce=tangentCurl*3.0*(1.0-mp);',
+'  vec3 homeForce=(homePos-pos)*0.08*(1.0-mp);',
 '  vec3 silPos=target.xyz;float silDensity=target.w;',
 '  float isAmbient=step(silDensity,-0.5);vec3 silForce=vec3(0.0);',
 '  float isOrbit=step(-0.5,silDensity)*step(silDensity,-0.01);',
@@ -3451,11 +3451,11 @@ var simFrag=[
 '  }else if(isOrbit>0.5){',
 '    float orbitDist=abs(silDensity);float spd1=0.06+seed*0.08;float spd2=0.04+orbitDist*0.12;',
 '    float a1=uTime*spd1+seed*6.2831;float a2=uTime*spd2+seed*3.14+orbitDist*10.0;',
-'    float oR=12.0+orbitDist*55.0;',
+'    float oR=8.0+orbitDist*30.0;',
 '    vec3 orbitOffset=vec3(cos(a1)*oR+sin(a2*0.3)*oR*0.4,sin(a1*0.6+seed*2.0)*oR*0.45+cos(a2*0.5)*oR*0.2,sin(a2*0.7+seed)*oR*0.5+cos(a1*0.4)*oR*0.15);',
 '    vec3 orbitTarget=silPos+orbitOffset*mp;silForce=(orbitTarget-pos)*0.018*mp;silForce+=tangentCurl*3.0*mp;',
 '  }else{',
-'    float oAngle=uTime*(0.04+seed*0.08)+seed*6.28;float oR=5.0+seed*15.0;',
+'    float oAngle=uTime*(0.03+seed*0.05)+seed*6.28;float oR=3.0+seed*8.0;',
 '    vec3 drift=silPos+vec3(cos(oAngle)*oR,sin(oAngle*0.6+seed)*oR*0.25,sin(oAngle*0.8)*oR);silForce=(drift-pos)*0.02*mp;',
 '  }',
 '  if(uMouseActive>0.5){vec3 toP=pos-uMouse3D;float mDist=length(toP);float mRad=mix(50.0,120.0,mp);if(mDist<mRad&&mDist>0.1){float push=1.0-mDist/mRad;push=push*push*push;pos+=normalize(toP)*push*12.0;}}',
@@ -3483,11 +3483,11 @@ var renderVert=[
 '  float mp=uMorph*uMorph*(3.0-2.0*uMorph);vMorph=mp;',
 '  float density=silData.w;float absDen=max(density,0.0);float isAmb=step(density,-0.5);',
 '  float isOrb=step(-0.5,density)*step(density,-0.01);',
-'  float coreSize=4.2;float figSize=2.2+absDen*1.6;float orbSize=1.5+abs(density)*2.2;float ambSize=1.1;',
+'  float coreSize=3.0;float figSize=1.8+absDen*1.2;float orbSize=1.2+abs(density)*1.6;float ambSize=0.8;',
 '  float unmaskSize=mix(mix(figSize,orbSize,isOrb),ambSize,isAmb);float sz=mix(coreSize,unmaskSize,mp);',
 '  float depthScale=340.0/max(-mvPos.z,100.0);gl_PointSize=sz*uPixelRatio*depthScale;gl_PointSize=max(gl_PointSize,0.5);',
-'  float coreAlpha=mix(0.4,0.7,posData.w);float figAlpha=0.4+absDen*0.6;',
-'  float orbAlpha=0.12+abs(density)*0.35;float ambAlpha=0.06;',
+'  float coreAlpha=mix(0.15,0.35,posData.w);float figAlpha=0.2+absDen*0.35;',
+'  float orbAlpha=0.06+abs(density)*0.18;float ambAlpha=0.03;',
 '  float unmaskAlpha=mix(mix(figAlpha,orbAlpha,isOrb),ambAlpha,isAmb);',
 '  vAlpha=mix(coreAlpha,max(unmaskAlpha,0.01),mp);vDensity=density;',
 '}'

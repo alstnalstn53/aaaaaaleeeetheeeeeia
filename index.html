@@ -3516,12 +3516,12 @@ var pts=new THREE.Points(pGeo,renderMat);scene.add(pts);
 /* 멀티 피겨 컴포지션 */
 var _budgetMul=_isMobile?0.5:1.0;
 var FIGURES=[
-  {src:'./images/fig-hand.jpg',cx:-0.06,cy:0.03,h3d:155,budget:Math.floor(52000*_budgetMul)},
-  {src:'./images/fig-press.jpg',cx:0.28,cy:0.05,h3d:140,budget:Math.floor(46000*_budgetMul)},
-  {src:'./images/fig-stipple.jpg',cx:-0.38,cy:-0.18,h3d:100,budget:Math.floor(26000*_budgetMul)},
-  {src:'./images/fig-stipple.jpg',cx:0.50,cy:-0.28,h3d:78,budget:Math.floor(18000*_budgetMul)},
-  {src:'./images/fig-stipple.jpg',cx:0.74,cy:0.18,h3d:55,budget:Math.floor(13000*_budgetMul)},
-  {src:'./images/fig-press.jpg',cx:-0.70,cy:0.05,h3d:35,budget:Math.floor(6000*_budgetMul)}
+  {src:'./images/fig-hand.jpg',cx:-0.04,cy:0.02,h3d:115,budget:Math.floor(52000*_budgetMul)},
+  {src:'./images/fig-press.jpg',cx:0.20,cy:0.04,h3d:105,budget:Math.floor(46000*_budgetMul)},
+  {src:'./images/fig-stipple.jpg',cx:-0.26,cy:-0.12,h3d:75,budget:Math.floor(26000*_budgetMul)},
+  {src:'./images/fig-stipple.jpg',cx:0.35,cy:-0.20,h3d:58,budget:Math.floor(18000*_budgetMul)},
+  {src:'./images/fig-stipple.jpg',cx:0.52,cy:0.13,h3d:42,budget:Math.floor(13000*_budgetMul)},
+  {src:'./images/fig-press.jpg',cx:-0.50,cy:0.04,h3d:28,budget:Math.floor(6000*_budgetMul)}
 ];
 var totalBudget=0;for(var fi=0;fi<FIGURES.length;fi++)totalBudget+=FIGURES[fi].budget;
 var DISSOLVE_BUDGET=Math.floor(N*0.22);var AMBIENT_BUDGET=N-totalBudget-DISSOLVE_BUDGET;
@@ -3593,7 +3593,7 @@ var _raycaster=new THREE.Raycaster();
   time+=0.0018;rotAngle+=0.0002;
   var als=window._alScene;
   var targetMorph=als.unmaskMode?als.morphLevel:0;
-  currentMorph+=(targetMorph-currentMorph)*0.04;
+  currentMorph+=(targetMorph-currentMorph)*0.012;
   var targetDark=document.body.classList.contains('dark-mode')?1:0;
   currentDark+=(targetDark-currentDark)*0.06;
   if(currentDark>0.5&&renderMat.blending!==THREE.AdditiveBlending){renderMat.blending=THREE.AdditiveBlending;renderMat.needsUpdate=true}

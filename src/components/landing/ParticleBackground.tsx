@@ -70,86 +70,98 @@ export function ParticleBackground() {
       let silTargetTex = createDataTex(silTargetData);
 
       // === Generate procedural hand silhouette via Canvas2D ===
+      // IMPORTANT: Dark pixels = figure, Light pixels = background (sampling reads dark areas)
       function generateHandSilhouette(): ImageData {
         const W = 512, H = 512;
         const cvs = document.createElement('canvas');
         cvs.width = W; cvs.height = H;
         const ctx = cvs.getContext('2d')!;
 
-        // Black background
-        ctx.fillStyle = '#000';
+        // WHITE background (will be ignored by sampler)
+        ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, W, H);
 
-        ctx.fillStyle = '#fff';
-        ctx.strokeStyle = '#fff';
+        // BLACK = figure (sampler picks dark pixels)
+        ctx.fillStyle = '#000';
+        ctx.strokeStyle = '#000';
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
 
         // Draw open palm reaching forward — viewed from front
-        const cx = W * 0.5, cy = H * 0.48;
+        const cx = W * 0.5, cy = H * 0.45;
 
-        // Palm base
+        // Palm base — large oval
         ctx.beginPath();
-        ctx.ellipse(cx, cy + 20, 62, 72, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx, cy + 25, 68, 78, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Fingers — spread open, slightly curved
+        // Fingers — spread open
         const fingers = [
-          { angle: -0.42, len: 95, w: 16, cx: cx - 36, cy: cy - 48 },  // pinky
-          { angle: -0.20, len: 115, w: 17, cx: cx - 18, cy: cy - 58 },  // ring
-          { angle: 0, len: 125, w: 18, cx: cx + 2, cy: cy - 62 },       // middle
-          { angle: 0.18, len: 118, w: 17, cx: cx + 22, cy: cy - 56 },   // index
+          { angle: -0.40, len: 100, w: 18, bx: cx - 38, by: cy - 50 },  // pinky
+          { angle: -0.18, len: 120, w: 19, bx: cx - 16, by: cy - 60 },  // ring
+          { angle: 0, len: 130, w: 20, bx: cx + 4, by: cy - 65 },       // middle
+          { angle: 0.20, len: 122, w: 19, bx: cx + 24, by: cy - 58 },   // index
         ];
 
         for (const f of fingers) {
           ctx.save();
-          ctx.translate(f.cx, f.cy);
+          ctx.translate(f.bx, f.by);
           ctx.rotate(f.angle);
-          // Finger body
+          // Use rect + arc for compatibility (roundRect may not exist everywhere)
+          const hw = f.w / 2;
           ctx.beginPath();
-          ctx.roundRect(-f.w / 2, -f.len, f.w, f.len, f.w / 2);
+          ctx.moveTo(-hw, 0);
+          ctx.lineTo(-hw, -f.len + hw);
+          ctx.arc(0, -f.len + hw, hw, Math.PI, 0);
+          ctx.lineTo(hw, 0);
+          ctx.closePath();
           ctx.fill();
           ctx.restore();
         }
 
-        // Thumb — angled outward
+        // Thumb — angled outward to the right
         ctx.save();
-        ctx.translate(cx + 52, cy - 10);
-        ctx.rotate(0.65);
+        ctx.translate(cx + 56, cy - 5);
+        ctx.rotate(0.7);
+        const tw = 10, tl = 85;
         ctx.beginPath();
-        ctx.roundRect(-14 / 2, -80, 18, 80, 9);
+        ctx.moveTo(-tw, 0);
+        ctx.lineTo(-tw, -tl + tw);
+        ctx.arc(0, -tl + tw, tw, Math.PI, 0);
+        ctx.lineTo(tw, 0);
+        ctx.closePath();
         ctx.fill();
         ctx.restore();
 
-        // Wrist / forearm
+        // Wrist / forearm — tapers down
         ctx.beginPath();
-        ctx.moveTo(cx - 38, cy + 70);
-        ctx.lineTo(cx - 32, cy + 220);
-        ctx.lineTo(cx + 32, cy + 220);
-        ctx.lineTo(cx + 38, cy + 70);
+        ctx.moveTo(cx - 42, cy + 80);
+        ctx.lineTo(cx - 34, cy + 240);
+        ctx.lineTo(cx + 34, cy + 240);
+        ctx.lineTo(cx + 42, cy + 80);
         ctx.closePath();
         ctx.fill();
 
-        // Subtle palm lines (darker = denser particles)
-        ctx.strokeStyle = '#ccc';
-        ctx.lineWidth = 2;
+        // Palm lines — slightly lighter (gray = less dense particles there)
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(cx - 35, cy + 10);
-        ctx.quadraticCurveTo(cx, cy - 5, cx + 40, cy + 15);
+        ctx.moveTo(cx - 38, cy + 12);
+        ctx.quadraticCurveTo(cx, cy - 8, cx + 42, cy + 18);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(cx - 32, cy + 35);
-        ctx.quadraticCurveTo(cx, cy + 18, cx + 35, cy + 30);
+        ctx.moveTo(cx - 35, cy + 40);
+        ctx.quadraticCurveTo(cx, cy + 22, cx + 38, cy + 35);
         ctx.stroke();
 
-        // Soft glow around fingertips — brighter = more particles
-        ctx.filter = 'blur(8px)';
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        // Soft shadow around edges — darker = more particles at edges
+        ctx.filter = 'blur(12px)';
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
         for (const f of fingers) {
           ctx.beginPath();
-          const tipX = f.cx + Math.sin(f.angle) * (-f.len * 0.1);
-          const tipY = f.cy + Math.cos(f.angle) * (-f.len);
-          ctx.ellipse(tipX, tipY, 14, 14, 0, 0, Math.PI * 2);
+          const tipX = f.bx + Math.sin(f.angle) * f.len * 0.9;
+          const tipY = f.by - Math.cos(f.angle) * f.len * 0.9;
+          ctx.ellipse(tipX, tipY, 18, 18, 0, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.filter = 'none';

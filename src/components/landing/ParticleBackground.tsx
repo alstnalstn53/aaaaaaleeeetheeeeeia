@@ -41,7 +41,7 @@ export function ParticleBackground() {
         return t;
       }
 
-      // Initial positions — sphere distribution
+      // Initial positions — center-dense sphere
       const initPosData = new Float32Array(N * 4);
       for (let i = 0; i < N; i++) {
         const phi = Math.acos(1 - 2 * (i + 0.5) / N);
@@ -55,7 +55,7 @@ export function ParticleBackground() {
       }
       const initPosTex = createDataTex(initPosData);
 
-      // Silhouette target positions (default — overwritten by figure loading)
+      // Silhouette target positions
       const silTargetData = new Float32Array(N * 4);
       for (let i = 0; i < N; i++) {
         const u = Math.random();
@@ -68,6 +68,94 @@ export function ParticleBackground() {
         silTargetData[i * 4 + 3] = -1.0;
       }
       let silTargetTex = createDataTex(silTargetData);
+
+      // === Generate procedural hand silhouette via Canvas2D ===
+      function generateHandSilhouette(): ImageData {
+        const W = 512, H = 512;
+        const cvs = document.createElement('canvas');
+        cvs.width = W; cvs.height = H;
+        const ctx = cvs.getContext('2d')!;
+
+        // Black background
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = '#fff';
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+
+        // Draw open palm reaching forward — viewed from front
+        const cx = W * 0.5, cy = H * 0.48;
+
+        // Palm base
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 20, 62, 72, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Fingers — spread open, slightly curved
+        const fingers = [
+          { angle: -0.42, len: 95, w: 16, cx: cx - 36, cy: cy - 48 },  // pinky
+          { angle: -0.20, len: 115, w: 17, cx: cx - 18, cy: cy - 58 },  // ring
+          { angle: 0, len: 125, w: 18, cx: cx + 2, cy: cy - 62 },       // middle
+          { angle: 0.18, len: 118, w: 17, cx: cx + 22, cy: cy - 56 },   // index
+        ];
+
+        for (const f of fingers) {
+          ctx.save();
+          ctx.translate(f.cx, f.cy);
+          ctx.rotate(f.angle);
+          // Finger body
+          ctx.beginPath();
+          ctx.roundRect(-f.w / 2, -f.len, f.w, f.len, f.w / 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Thumb — angled outward
+        ctx.save();
+        ctx.translate(cx + 52, cy - 10);
+        ctx.rotate(0.65);
+        ctx.beginPath();
+        ctx.roundRect(-14 / 2, -80, 18, 80, 9);
+        ctx.fill();
+        ctx.restore();
+
+        // Wrist / forearm
+        ctx.beginPath();
+        ctx.moveTo(cx - 38, cy + 70);
+        ctx.lineTo(cx - 32, cy + 220);
+        ctx.lineTo(cx + 32, cy + 220);
+        ctx.lineTo(cx + 38, cy + 70);
+        ctx.closePath();
+        ctx.fill();
+
+        // Subtle palm lines (darker = denser particles)
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - 35, cy + 10);
+        ctx.quadraticCurveTo(cx, cy - 5, cx + 40, cy + 15);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - 32, cy + 35);
+        ctx.quadraticCurveTo(cx, cy + 18, cx + 35, cy + 30);
+        ctx.stroke();
+
+        // Soft glow around fingertips — brighter = more particles
+        ctx.filter = 'blur(8px)';
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        for (const f of fingers) {
+          ctx.beginPath();
+          const tipX = f.cx + Math.sin(f.angle) * (-f.len * 0.1);
+          const tipY = f.cy + Math.cos(f.angle) * (-f.len);
+          ctx.ellipse(tipX, tipY, 14, 14, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.filter = 'none';
+
+        return ctx.getImageData(0, 0, W, H);
+      }
 
       // FBO render targets
       const rtOpts = { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat, type: THREE.FloatType };
@@ -201,33 +289,40 @@ void main(){
         renderer.setRenderTarget(null);
       }
 
-      // Render shader
+      // Render shader — with hand glow effect
       const renderVert = `attribute vec2 aRef;uniform sampler2D uPositions;uniform sampler2D uSilTargets;
-uniform float uPixelRatio;uniform float uMorph;
-varying float vAlpha;varying float vDensity;varying float vMorph;
+uniform float uPixelRatio;uniform float uMorph;uniform float uHandReveal;
+varying float vAlpha;varying float vDensity;varying float vMorph;varying float vHandGlow;
 void main(){
   vec4 posData=texture2D(uPositions,aRef);vec4 silData=texture2D(uSilTargets,aRef);
   vec3 pos=posData.xyz;vec4 mvPos=modelViewMatrix*vec4(pos,1.0);gl_Position=projectionMatrix*mvPos;
   float mp=uMorph*uMorph*(3.0-2.0*uMorph);vMorph=mp;
   float density=silData.w;float absDen=max(density,0.0);float isAmb=step(density,-0.5);
   float isOrb=step(-0.5,density)*step(density,-0.01);
-  float coreSize=3.0;float figSize=1.8+absDen*1.2;float orbSize=1.2+abs(density)*1.6;float ambSize=0.8;
+  // Hand glow: particles in upper area (fingertips) get extra brightness
+  float handY=silData.y;float handGlowRaw=smoothstep(20.0,80.0,handY)*absDen;
+  vHandGlow=handGlowRaw*uHandReveal*mp;
+  float coreSize=3.0;float figSize=1.8+absDen*1.2+vHandGlow*1.5;float orbSize=1.2+abs(density)*1.6;float ambSize=0.8;
   float unmaskSize=mix(mix(figSize,orbSize,isOrb),ambSize,isAmb);float sz=mix(coreSize,unmaskSize,mp);
   float depthScale=340.0/max(-mvPos.z,100.0);gl_PointSize=sz*uPixelRatio*depthScale;gl_PointSize=max(gl_PointSize,0.5);
-  float coreAlpha=mix(0.15,0.35,posData.w);float figAlpha=0.2+absDen*0.35;
+  float coreAlpha=mix(0.15,0.35,posData.w);float figAlpha=0.2+absDen*0.35+vHandGlow*0.3;
   float orbAlpha=0.06+abs(density)*0.18;float ambAlpha=0.03;
   float unmaskAlpha=mix(mix(figAlpha,orbAlpha,isOrb),ambAlpha,isAmb);
   vAlpha=mix(coreAlpha,max(unmaskAlpha,0.01),mp);vDensity=density;
 }`;
 
-      const renderFrag = `varying float vAlpha;varying float vDensity;varying float vMorph;
+      const renderFrag = `varying float vAlpha;varying float vDensity;varying float vMorph;varying float vHandGlow;
 void main(){
   float d=length(gl_PointCoord-0.5);if(d>0.5)discard;
   float absDen=max(vDensity,0.0);
   float core=1.0-smoothstep(0.0,0.12,d);float glow=1.0-smoothstep(0.0,0.5,d);glow*=glow;float coreShape=core*0.6+glow*0.5;
   float sharpness=10.0+absDen*18.0;float figShape=exp(-d*d*sharpness);
   float shape=mix(coreShape,figShape,vMorph);float alpha=shape*vAlpha;if(alpha<0.002)discard;
-  gl_FragColor=vec4(vec3(0.65),alpha);
+  // Hand glow: warm white with slight warmth
+  vec3 baseCol=vec3(0.65);
+  vec3 handCol=vec3(0.85,0.82,0.78);
+  vec3 col=mix(baseCol,handCol,vHandGlow);
+  gl_FragColor=vec4(col,alpha);
 }`;
 
       // Points geometry
@@ -246,6 +341,7 @@ void main(){
         uSilTargets: { value: silTargetTex },
         uPixelRatio: { value: Math.min(devicePixelRatio, 2) },
         uMorph: { value: 0 },
+        uHandReveal: { value: 0 },
       };
 
       const renderMat = new THREE.ShaderMaterial({
@@ -260,21 +356,25 @@ void main(){
       const pts = new THREE.Points(pGeo, renderMat);
       scene.add(pts);
 
-      // Multi-figure composition
+      // === Build hand as primary figure + supporting figures ===
       const budgetMul = isMobile ? 0.5 : 1.0;
-      const FIGURES = [
-        { src: '/images/fig-hand.jpg', cx: -0.04, cy: 0.02, h3d: 115, budget: Math.floor(52000 * budgetMul) },
-        { src: '/images/fig-press.jpg', cx: 0.20, cy: 0.04, h3d: 105, budget: Math.floor(46000 * budgetMul) },
-        { src: '/images/fig-stipple.jpg', cx: -0.26, cy: -0.12, h3d: 75, budget: Math.floor(26000 * budgetMul) },
-        { src: '/images/fig-stipple.jpg', cx: 0.35, cy: -0.20, h3d: 58, budget: Math.floor(18000 * budgetMul) },
-        { src: '/images/fig-stipple.jpg', cx: 0.52, cy: 0.13, h3d: 42, budget: Math.floor(13000 * budgetMul) },
-        { src: '/images/fig-press.jpg', cx: -0.50, cy: 0.04, h3d: 28, budget: Math.floor(6000 * budgetMul) },
-      ];
-      let totalBudget = 0;
-      for (const fig of FIGURES) totalBudget += fig.budget;
-      const DISSOLVE_BUDGET = Math.floor(N * 0.22);
 
-      function sampleFigure(px: Uint8ClampedArray, W: number, H: number, fig: typeof FIGURES[0], offset: number): number {
+      // Hand figure gets the biggest budget — center of composition
+      const HAND_BUDGET = Math.floor(80000 * budgetMul);
+      // Supporting ambient figures
+      const FIGURES = [
+        { src: '/images/fig-hand.jpg', cx: -0.30, cy: 0.05, h3d: 70, budget: Math.floor(22000 * budgetMul) },
+        { src: '/images/fig-press.jpg', cx: 0.32, cy: -0.10, h3d: 60, budget: Math.floor(18000 * budgetMul) },
+        { src: '/images/fig-stipple.jpg', cx: -0.48, cy: -0.18, h3d: 40, budget: Math.floor(10000 * budgetMul) },
+        { src: '/images/fig-stipple.jpg', cx: 0.50, cy: 0.15, h3d: 30, budget: Math.floor(8000 * budgetMul) },
+      ];
+      const DISSOLVE_BUDGET = Math.floor(N * 0.15);
+
+      function sampleFromImageData(
+        px: Uint8ClampedArray, W: number, H: number,
+        offX: number, offY: number, offZ: number,
+        h3d: number, budget: number, sizeRatio: number, offset: number
+      ): number {
         let sumW = 0, sumX = 0, sumY = 0;
         for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
           const idx = (y * W + x) * 4;
@@ -289,12 +389,10 @@ void main(){
           const dk = 1 - (px[idx] + px[idx + 1] + px[idx + 2]) / (3 * 255);
           if (dk > 0.10) { const d = Math.sqrt((x - cenX) ** 2 + (y - cenY) ** 2); if (d > maxR) maxR = d; }
         }
-        const s3d = fig.h3d / H, worldSpan = 320;
-        const offX = fig.cx * worldSpan, offY = fig.cy * worldSpan * 0.6, offZ = (Math.random() - 0.5) * 15;
-        const sizeRatio = fig.h3d / 155;
-        const bodyTarget = Math.floor(fig.budget * 0.60);
+        const s3d = h3d / H;
+        const bodyTarget = Math.floor(budget * 0.65);
         let placed = 0, attempts = 0;
-        const maxAtt = fig.budget * 600;
+        const maxAtt = budget * 600;
         const vigR = maxR * 1.7;
 
         while (placed < bodyTarget && attempts < maxAtt) {
@@ -307,7 +405,7 @@ void main(){
           const prob = darkness * darkness * vignette * 4.5;
           if (darkness > 0.03 && Math.random() < prob) {
             let x3d = (ix - cenX) * s3d + offX, y3d = -(iy - cenY) * s3d + offY;
-            const edgeness = (1 - darkness) * (1 + Math.sqrt(dx * dx + dy * dy) * vigR * 2 / vigR);
+            const edgeness = (1 - darkness) * (1 + Math.sqrt(dx * dx + dy * dy) * 2);
             const scatter = edgeness * edgeness * 5.0 * sizeRatio;
             x3d += (Math.random() - 0.5) * scatter;
             y3d += (Math.random() - 0.5) * scatter;
@@ -323,8 +421,8 @@ void main(){
           attempts++;
         }
 
-        // Dissolve particles
-        const dissTarget = Math.floor(fig.budget * 0.10);
+        // Dissolve around edges
+        const dissTarget = Math.floor(budget * 0.20);
         let dissPlaced = 0;
         attempts = 0;
         while (dissPlaced < dissTarget && attempts < maxAtt) {
@@ -332,7 +430,7 @@ void main(){
           const idx = (iy * W + ix) * 4;
           const darkness = 1 - (px[idx] + px[idx + 1] + px[idx + 2]) / (3 * 255);
           if (darkness > 0.02 && darkness < 0.40) {
-            const pushR = (6 + Math.random() * 45) * sizeRatio;
+            const pushR = (6 + Math.random() * 35) * sizeRatio;
             const pushA = Math.random() * Math.PI * 2;
             const x3d = (ix - cenX) * s3d + offX + Math.cos(pushA) * pushR;
             const y3d = -(iy - cenY) * s3d + offY + Math.sin(pushA) * pushR * 0.7;
@@ -341,14 +439,14 @@ void main(){
             silTargetData[pi * 4] = x3d;
             silTargetData[pi * 4 + 1] = y3d;
             silTargetData[pi * 4 + 2] = z3d;
-            silTargetData[pi * 4 + 3] = darkness * 0.15;
+            silTargetData[pi * 4 + 3] = darkness * 0.12;
             dissPlaced++;
           }
           attempts++;
         }
 
         // Orbit particles
-        const orbitTarget = fig.budget - bodyTarget - dissTarget;
+        const orbitTarget = budget - bodyTarget - dissTarget;
         let orbitPlaced = 0;
         attempts = 0;
         while (orbitPlaced < orbitTarget && attempts < maxAtt) {
@@ -359,8 +457,7 @@ void main(){
             let x3d = (ix - cenX) * s3d + offX, y3d = -(iy - cenY) * s3d + offY;
             const orbitR = (3 + Math.random() * 12) * sizeRatio;
             const orbitA = Math.random() * Math.PI * 2;
-            x3d += Math.cos(orbitA) * orbitR;
-            y3d += Math.sin(orbitA) * orbitR * 0.7;
+            x3d += Math.cos(orbitA) * orbitR; y3d += Math.sin(orbitA) * orbitR * 0.7;
             const z3d = (Math.random() - 0.5) * orbitR * 1.5 + offZ;
             const pi = offset + placed + dissPlaced + orbitPlaced;
             silTargetData[pi * 4] = x3d;
@@ -374,16 +471,27 @@ void main(){
         return placed + dissPlaced + orbitPlaced;
       }
 
-      // Load figure images and build composition
+      // === Build the hand silhouette first ===
+      const handImgData = generateHandSilhouette();
+      let placed = sampleFromImageData(
+        handImgData.data, 512, 512,
+        0, 10, 0,    // centered, slightly above center
+        160,          // h3d — large hand
+        HAND_BUDGET,
+        1.0,          // sizeRatio
+        0             // offset
+      );
+
+      // Load supporting figure images
       const srcSet = new Set(FIGURES.map((f) => f.src));
-      const loaded: Record<string, HTMLImageElement> = {};
+      const loadedImgs: Record<string, HTMLImageElement> = {};
       let loadCount = 0;
       const srcList = Array.from(srcSet);
 
       function onAllLoaded() {
-        let placed = 0;
+        let currentOffset = placed;
         for (const fig of FIGURES) {
-          const img = loaded[fig.src];
+          const img = loadedImgs[fig.src];
           if (!img) continue;
           const maxDim = Math.max(400, Math.min(600, fig.h3d * 4));
           const sc = maxDim / Math.max(img.width, img.height);
@@ -394,65 +502,71 @@ void main(){
           ctx.translate(W, 0); ctx.scale(-1, 1);
           ctx.drawImage(img, 0, 0, W, H);
           const imgData = ctx.getImageData(0, 0, W, H);
-          placed += sampleFigure(imgData.data, W, H, fig, placed);
+          const worldSpan = 320;
+          currentOffset += sampleFromImageData(
+            imgData.data, W, H,
+            fig.cx * worldSpan, fig.cy * worldSpan * 0.6, (Math.random() - 0.5) * 15,
+            fig.h3d, fig.budget, fig.h3d / 155, currentOffset
+          );
         }
-        // Dissolve fill
-        const dissEnd = placed + DISSOLVE_BUDGET;
-        while (placed < dissEnd) {
+
+        // Dissolve fill between figures
+        const dissEnd = currentOffset + DISSOLVE_BUDGET;
+        while (currentOffset < dissEnd && currentOffset < N) {
           const rf = FIGURES[Math.floor(Math.random() * FIGURES.length)];
           const r = Math.random();
           let bx: number, by: number, bz: number;
-          if (r < 0.35) {
-            bx = rf.cx * 320 + (Math.random() - 0.5) * rf.h3d * 1.2;
-            by = rf.cy * 320 * 0.6 + (Math.random() - 0.5) * rf.h3d * 0.8;
-            bz = (Math.random() - 0.5) * rf.h3d * 0.5;
-          } else if (r < 0.70) {
-            bx = rf.cx * 320 + (Math.random() - 0.5) * 180;
-            by = rf.cy * 320 * 0.6 + (Math.random() - 0.5) * 120;
-            bz = (Math.random() - 0.5) * 50;
+          if (r < 0.5) {
+            // Between hand center and supporting figures
+            const t = Math.random();
+            bx = t * rf.cx * 320 + (Math.random() - 0.5) * 80;
+            by = t * rf.cy * 320 * 0.6 + (Math.random() - 0.5) * 60;
+            bz = (Math.random() - 0.5) * 40;
           } else {
-            const rf2 = FIGURES[Math.floor(Math.random() * FIGURES.length)];
-            const ang = Math.random() * Math.PI * 2;
-            const dist = 60 + Math.random() * 160;
-            bx = rf2.cx * 320 + Math.cos(ang) * dist;
-            by = rf2.cy * 320 * 0.6 + Math.sin(ang) * dist * 0.7;
-            bz = (Math.random() - 0.5) * 70;
+            bx = rf.cx * 320 + (Math.random() - 0.5) * 160;
+            by = rf.cy * 320 * 0.6 + (Math.random() - 0.5) * 100;
+            bz = (Math.random() - 0.5) * 50;
           }
-          silTargetData[placed * 4] = bx;
-          silTargetData[placed * 4 + 1] = by;
-          silTargetData[placed * 4 + 2] = bz;
-          silTargetData[placed * 4 + 3] = 0.02 + Math.random() * 0.10;
-          placed++;
+          silTargetData[currentOffset * 4] = bx;
+          silTargetData[currentOffset * 4 + 1] = by;
+          silTargetData[currentOffset * 4 + 2] = bz;
+          silTargetData[currentOffset * 4 + 3] = 0.02 + Math.random() * 0.08;
+          currentOffset++;
         }
+
         // Ambient fill
-        while (placed < N) {
-          const rff = FIGURES[Math.floor(Math.random() * FIGURES.length)];
+        while (currentOffset < N) {
           const aAng = Math.random() * Math.PI * 2;
-          const aDist = 20 + Math.random() * 200;
-          silTargetData[placed * 4] = rff.cx * 320 + Math.cos(aAng) * aDist;
-          silTargetData[placed * 4 + 1] = rff.cy * 320 * 0.6 + Math.sin(aAng) * aDist * 0.7;
-          silTargetData[placed * 4 + 2] = (Math.random() - 0.5) * 80;
-          silTargetData[placed * 4 + 3] = -1.0;
-          placed++;
+          const aDist = 30 + Math.random() * 200;
+          silTargetData[currentOffset * 4] = Math.cos(aAng) * aDist;
+          silTargetData[currentOffset * 4 + 1] = Math.sin(aAng) * aDist * 0.7;
+          silTargetData[currentOffset * 4 + 2] = (Math.random() - 0.5) * 80;
+          silTargetData[currentOffset * 4 + 3] = -1.0;
+          currentOffset++;
         }
+
         silTargetTex = createDataTex(silTargetData);
         simMat.uniforms.uSilTargets.value = silTargetTex;
         renderUniforms.uSilTargets.value = silTargetTex;
       }
 
-      for (const src of srcList) {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-          loaded[src] = img;
-          loadCount++;
-          if (loadCount === srcList.length) onAllLoaded();
-        };
-        img.onerror = () => {
-          loadCount++;
-          if (loadCount === srcList.length) onAllLoaded();
-        };
-        img.src = src;
+      if (srcList.length === 0) {
+        onAllLoaded();
+      } else {
+        for (const src of srcList) {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            loadedImgs[src] = img;
+            loadCount++;
+            if (loadCount === srcList.length) onAllLoaded();
+          };
+          img.onerror = () => {
+            loadCount++;
+            if (loadCount === srcList.length) onAllLoaded();
+          };
+          img.src = src;
+        }
       }
 
       // Post-processing
@@ -462,7 +576,7 @@ void main(){
       composer.addPass(new RenderPass(scene, camera));
       composer.addPass(bloomPass);
 
-      // Animation loop
+      // === Animation state ===
       let time = 0;
       let rotAngle = 0;
       let flip = false;
@@ -471,6 +585,13 @@ void main(){
       let mouseActive = false;
       let mouseTimer: ReturnType<typeof setTimeout>;
       const raycaster = new THREE.Raycaster();
+
+      // Morph animation timing
+      const MORPH_DELAY = 1.5;      // seconds before morph starts
+      const MORPH_DURATION = 4.0;   // seconds for full morph (스르르르륵)
+      const HAND_GLOW_DELAY = 3.5;  // hand glow starts after morph is mostly done
+      const HAND_GLOW_DURATION = 2.0;
+      const startTime = performance.now() / 1000;
 
       const onMouseMove = (e: MouseEvent) => {
         mouseNDC.x = (e.clientX / innerWidth) * 2 - 1;
@@ -487,9 +608,26 @@ void main(){
         time += 0.0018;
         rotAngle += 0.0002;
 
+        const elapsed = performance.now() / 1000 - startTime;
+
+        // Smooth morph: 0 → 1 over MORPH_DURATION after MORPH_DELAY
+        let morphTarget = 0;
+        if (elapsed > MORPH_DELAY) {
+          const t = Math.min((elapsed - MORPH_DELAY) / MORPH_DURATION, 1);
+          // Ease out expo for smooth "스르르르륵" feel
+          morphTarget = 1 - Math.pow(1 - t, 3);
+        }
+
+        // Hand glow reveal: 0 → 1 (사라라락 effect on fingertips)
+        let handReveal = 0;
+        if (elapsed > HAND_GLOW_DELAY) {
+          const t = Math.min((elapsed - HAND_GLOW_DELAY) / HAND_GLOW_DURATION, 1);
+          handReveal = t * t; // ease-in for gentle appear
+        }
+
         simMat.uniforms.uPositions.value = flip ? rtB.texture : rtA.texture;
         simMat.uniforms.uTime.value = time;
-        simMat.uniforms.uMorph.value = 0; // Landing = no morph
+        simMat.uniforms.uMorph.value = morphTarget;
         simMat.uniforms.uRotAngle.value = rotAngle;
 
         if (mouseActive) {
@@ -508,10 +646,12 @@ void main(){
         renderer.setRenderTarget(null);
 
         renderUniforms.uPositions.value = flip ? rtA.texture : rtB.texture;
-        renderUniforms.uMorph.value = 0;
+        renderUniforms.uMorph.value = morphTarget;
+        renderUniforms.uHandReveal.value = handReveal;
         flip = !flip;
 
-        bloomPass.strength = 0.03;
+        // Bloom increases as hand forms
+        bloomPass.strength = 0.03 + morphTarget * 0.04 + handReveal * 0.06;
         composer.render();
       }
       animate();

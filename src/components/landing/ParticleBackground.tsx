@@ -70,101 +70,227 @@ export function ParticleBackground() {
       let silTargetTex = createDataTex(silTargetData);
 
       // === Generate procedural hand silhouette via Canvas2D ===
-      // IMPORTANT: Dark pixels = figure, Light pixels = background (sampling reads dark areas)
+      // Stipple/wireframe style: shading gradients create density variation
+      // Dark = dense particles (raised surface), Gray = sparse (receding), White = empty
       function generateHandSilhouette(): ImageData {
-        const W = 512, H = 512;
+        const W = 600, H = 700;
         const cvs = document.createElement('canvas');
         cvs.width = W; cvs.height = H;
         const ctx = cvs.getContext('2d')!;
 
-        // WHITE background (will be ignored by sampler)
+        // White background — ignored by sampler
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, W, H);
 
-        // BLACK = figure (sampler picks dark pixels)
-        ctx.fillStyle = '#000';
-        ctx.strokeStyle = '#000';
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
+        const cx = W * 0.5, cy = H * 0.38;
 
-        // Draw open palm reaching forward — viewed from front
-        const cx = W * 0.5, cy = H * 0.45;
-
-        // Palm base — large oval
-        ctx.beginPath();
-        ctx.ellipse(cx, cy + 25, 68, 78, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Fingers — spread open
-        const fingers = [
-          { angle: -0.40, len: 100, w: 18, bx: cx - 38, by: cy - 50 },  // pinky
-          { angle: -0.18, len: 120, w: 19, bx: cx - 16, by: cy - 60 },  // ring
-          { angle: 0, len: 130, w: 20, bx: cx + 4, by: cy - 65 },       // middle
-          { angle: 0.20, len: 122, w: 19, bx: cx + 24, by: cy - 58 },   // index
-        ];
-
-        for (const f of fingers) {
+        // Helper: draw a finger with 3D shading (radial gradient along length)
+        function drawFinger(
+          bx: number, by: number, angle: number,
+          len: number, wBase: number, wTip: number, joints: number[]
+        ) {
           ctx.save();
-          ctx.translate(f.bx, f.by);
-          ctx.rotate(f.angle);
-          // Use rect + arc for compatibility (roundRect may not exist everywhere)
-          const hw = f.w / 2;
+          ctx.translate(bx, by);
+          ctx.rotate(angle);
+
+          // Finger outline path
+          const segments = 20;
+          const pts: { lx: number; ly: number; rx: number; ry: number }[] = [];
+          for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const y = -t * len;
+            const w = wBase + (wTip - wBase) * t;
+            pts.push({ lx: -w / 2, ly: y, rx: w / 2, ry: y });
+          }
+
+          // Fill with gradient for 3D roundness
           ctx.beginPath();
-          ctx.moveTo(-hw, 0);
-          ctx.lineTo(-hw, -f.len + hw);
-          ctx.arc(0, -f.len + hw, hw, Math.PI, 0);
-          ctx.lineTo(hw, 0);
+          for (let i = 0; i < pts.length; i++) ctx.lineTo(pts[i].lx, pts[i].ly);
+          ctx.arc(0, -len, wTip / 2, Math.PI, 0); // rounded tip
+          for (let i = pts.length - 1; i >= 0; i--) ctx.lineTo(pts[i].rx, pts[i].ry);
           ctx.closePath();
+
+          // Radial gradient: center dark (raised), edges lighter (receding)
+          const grad = ctx.createLinearGradient(-wBase / 2, 0, wBase / 2, 0);
+          grad.addColorStop(0, '#888');    // left edge — lighter
+          grad.addColorStop(0.25, '#333'); // inner — dark (dense)
+          grad.addColorStop(0.5, '#111');  // center — darkest (most dense)
+          grad.addColorStop(0.75, '#333');
+          grad.addColorStop(1, '#888');    // right edge
+          ctx.fillStyle = grad;
           ctx.fill();
+
+          // Joint creases — horizontal dark lines
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = 1.5;
+          for (const j of joints) {
+            const jy = -j * len;
+            const jw = wBase + (wTip - wBase) * j;
+            ctx.beginPath();
+            ctx.moveTo(-jw / 2 + 2, jy);
+            ctx.lineTo(jw / 2 - 2, jy);
+            ctx.stroke();
+          }
+
+          // Fingertip highlight ring — darker ring around nail area
+          ctx.beginPath();
+          ctx.ellipse(0, -len + wTip * 0.3, wTip * 0.35, wTip * 0.25, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = '#222';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+
           ctx.restore();
         }
 
-        // Thumb — angled outward to the right
-        ctx.save();
-        ctx.translate(cx + 56, cy - 5);
-        ctx.rotate(0.7);
-        const tw = 10, tl = 85;
+        // === Palm — 3D shaded oval ===
+        // Multiple overlapping radial gradients for volumetric feel
+        const palmW = 80, palmH = 95;
+
+        // Main palm body
         ctx.beginPath();
-        ctx.moveTo(-tw, 0);
-        ctx.lineTo(-tw, -tl + tw);
-        ctx.arc(0, -tl + tw, tw, Math.PI, 0);
-        ctx.lineTo(tw, 0);
-        ctx.closePath();
+        ctx.ellipse(cx, cy + 20, palmW, palmH, 0, 0, Math.PI * 2);
+        const palmGrad = ctx.createRadialGradient(cx - 10, cy + 10, 5, cx, cy + 20, palmH);
+        palmGrad.addColorStop(0, '#000');  // center dense
+        palmGrad.addColorStop(0.4, '#222');
+        palmGrad.addColorStop(0.7, '#555');
+        palmGrad.addColorStop(0.9, '#888');
+        palmGrad.addColorStop(1, '#ccc');  // edge sparse
+        ctx.fillStyle = palmGrad;
         ctx.fill();
+
+        // Palm mound (thenar - thumb side) — extra density
+        ctx.beginPath();
+        ctx.ellipse(cx + 40, cy + 30, 30, 45, 0.3, 0, Math.PI * 2);
+        const thenarGrad = ctx.createRadialGradient(cx + 38, cy + 28, 3, cx + 40, cy + 30, 35);
+        thenarGrad.addColorStop(0, '#111');
+        thenarGrad.addColorStop(0.6, '#444');
+        thenarGrad.addColorStop(1, 'rgba(100,100,100,0)');
+        ctx.fillStyle = thenarGrad;
+        ctx.fill();
+
+        // Hypothenar (pinky side mound)
+        ctx.beginPath();
+        ctx.ellipse(cx - 38, cy + 40, 25, 40, -0.2, 0, Math.PI * 2);
+        const hypoGrad = ctx.createRadialGradient(cx - 36, cy + 38, 3, cx - 38, cy + 40, 30);
+        hypoGrad.addColorStop(0, '#222');
+        hypoGrad.addColorStop(0.6, '#555');
+        hypoGrad.addColorStop(1, 'rgba(120,120,120,0)');
+        ctx.fillStyle = hypoGrad;
+        ctx.fill();
+
+        // === Palm creases — dark lines (high density) ===
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+
+        // Heart line
+        ctx.beginPath();
+        ctx.moveTo(cx - 55, cy - 5);
+        ctx.quadraticCurveTo(cx - 10, cy - 25, cx + 50, cy + 5);
+        ctx.stroke();
+
+        // Head line
+        ctx.beginPath();
+        ctx.moveTo(cx - 50, cy + 18);
+        ctx.quadraticCurveTo(cx, cy - 2, cx + 55, cy + 12);
+        ctx.stroke();
+
+        // Life line
+        ctx.beginPath();
+        ctx.moveTo(cx - 48, cy - 10);
+        ctx.quadraticCurveTo(cx - 35, cy + 40, cx - 15, cy + 80);
+        ctx.stroke();
+
+        // === Fingers — 3D shaded with joints ===
+        // From left: pinky, ring, middle, index
+        drawFinger(cx - 48, cy - 62, -0.28, 105, 19, 14, [0.33, 0.60]);  // pinky
+        drawFinger(cx - 18, cy - 78, -0.10, 130, 21, 15, [0.30, 0.58]);  // ring
+        drawFinger(cx + 8, cy - 82, 0.02, 140, 22, 16, [0.28, 0.56]);   // middle
+        drawFinger(cx + 34, cy - 74, 0.14, 132, 21, 15, [0.30, 0.58]);  // index
+
+        // === Thumb — angled outward, 3D shaded ===
+        ctx.save();
+        ctx.translate(cx + 62, cy + 5);
+        ctx.rotate(0.75);
+
+        const thumbLen = 95, thumbW = 24, thumbTip = 18;
+        ctx.beginPath();
+        ctx.moveTo(-thumbW / 2, 0);
+        ctx.lineTo(-thumbTip / 2, -thumbLen);
+        ctx.arc(0, -thumbLen, thumbTip / 2, Math.PI, 0);
+        ctx.lineTo(thumbW / 2, 0);
+        ctx.closePath();
+        const thumbGrad = ctx.createLinearGradient(-thumbW / 2, 0, thumbW / 2, 0);
+        thumbGrad.addColorStop(0, '#777');
+        thumbGrad.addColorStop(0.3, '#222');
+        thumbGrad.addColorStop(0.5, '#111');
+        thumbGrad.addColorStop(0.7, '#222');
+        thumbGrad.addColorStop(1, '#777');
+        ctx.fillStyle = thumbGrad;
+        ctx.fill();
+
+        // Thumb joint
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-thumbW * 0.35, -thumbLen * 0.45);
+        ctx.lineTo(thumbW * 0.35, -thumbLen * 0.45);
+        ctx.stroke();
+
         ctx.restore();
 
-        // Wrist / forearm — tapers down
+        // === Wrist / forearm — gradient fade ===
         ctx.beginPath();
-        ctx.moveTo(cx - 42, cy + 80);
-        ctx.lineTo(cx - 34, cy + 240);
-        ctx.lineTo(cx + 34, cy + 240);
-        ctx.lineTo(cx + 42, cy + 80);
+        ctx.moveTo(cx - 50, cy + 90);
+        ctx.lineTo(cx - 38, cy + 300);
+        ctx.lineTo(cx + 38, cy + 300);
+        ctx.lineTo(cx + 50, cy + 90);
         ctx.closePath();
+        const wristGrad = ctx.createLinearGradient(0, cy + 90, 0, cy + 300);
+        wristGrad.addColorStop(0, '#333');
+        wristGrad.addColorStop(0.3, '#555');
+        wristGrad.addColorStop(0.7, '#999');
+        wristGrad.addColorStop(1, '#ddd'); // fades out toward bottom
+        ctx.fillStyle = wristGrad;
         ctx.fill();
 
-        // Palm lines — slightly lighter (gray = less dense particles there)
-        ctx.strokeStyle = '#555';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(cx - 38, cy + 12);
-        ctx.quadraticCurveTo(cx, cy - 8, cx + 42, cy + 18);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(cx - 35, cy + 40);
-        ctx.quadraticCurveTo(cx, cy + 22, cx + 38, cy + 35);
-        ctx.stroke();
-
-        // Soft shadow around edges — darker = more particles at edges
-        ctx.filter = 'blur(12px)';
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        for (const f of fingers) {
+        // Wrist tendons — subtle vertical lines
+        ctx.strokeStyle = '#444';
+        ctx.lineWidth = 1;
+        for (let i = -2; i <= 2; i++) {
           ctx.beginPath();
-          const tipX = f.bx + Math.sin(f.angle) * f.len * 0.9;
-          const tipY = f.by - Math.cos(f.angle) * f.len * 0.9;
-          ctx.ellipse(tipX, tipY, 18, 18, 0, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.moveTo(cx + i * 12, cy + 95);
+          ctx.lineTo(cx + i * 10, cy + 200);
+          ctx.stroke();
         }
-        ctx.filter = 'none';
+
+        // === Surface topology lines — wireframe feel ===
+        // Horizontal contour lines across the palm (like the reference)
+        ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+        ctx.lineWidth = 0.8;
+        for (let y = cy - 60; y < cy + 90; y += 8) {
+          ctx.beginPath();
+          // Only draw where palm exists — approximate ellipse width at this height
+          const dy = (y - (cy + 20)) / palmH;
+          if (Math.abs(dy) < 1) {
+            const w = palmW * Math.sqrt(1 - dy * dy);
+            ctx.moveTo(cx - w, y);
+            ctx.lineTo(cx + w, y);
+            ctx.stroke();
+          }
+        }
+
+        // Vertical contour lines
+        for (let x = cx - 70; x < cx + 70; x += 10) {
+          ctx.beginPath();
+          const dx = (x - cx) / palmW;
+          if (Math.abs(dx) < 1) {
+            const hRange = palmH * Math.sqrt(1 - dx * dx);
+            ctx.moveTo(x, cy + 20 - hRange);
+            ctx.lineTo(x, cy + 20 + hRange * 0.7);
+            ctx.stroke();
+          }
+        }
 
         return ctx.getImageData(0, 0, W, H);
       }
@@ -486,9 +612,9 @@ void main(){
       // === Build the hand silhouette first ===
       const handImgData = generateHandSilhouette();
       let placed = sampleFromImageData(
-        handImgData.data, 512, 512,
-        0, 10, 0,    // centered, slightly above center
-        160,          // h3d — large hand
+        handImgData.data, 600, 700,
+        0, 15, 0,    // centered, slightly above center
+        180,          // h3d — large hand, prominent
         HAND_BUDGET,
         1.0,          // sizeRatio
         0             // offset

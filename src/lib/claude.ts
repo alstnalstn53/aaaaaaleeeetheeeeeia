@@ -3,7 +3,7 @@ import { PROMPTS, type PromptMode } from './prompts';
 export async function callClaude(
   mode: PromptMode,
   messages: Array<{ role: 'user' | 'assistant'; content: string }>,
-  maxTokens: number = 600
+  maxTokens: number = 1200
 ): Promise<string> {
   const systemPrompt = PROMPTS[mode];
   if (!systemPrompt) throw new Error(`Invalid mode: ${mode}`);

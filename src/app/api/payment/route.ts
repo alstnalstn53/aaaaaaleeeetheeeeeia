@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe, TOKEN_PACKAGES, type PackageId } from '@/lib/stripe';
+import { getStripe, TOKEN_PACKAGES, type PackageId } from '@/lib/stripe';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,6 +9,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid package' }, { status: 400 });
     }
 
+    const stripe = getStripe();
     const paymentIntent = await stripe.paymentIntents.create({
       amount: pkg.price,
       currency: 'usd',

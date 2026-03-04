@@ -404,6 +404,8 @@ body.dark-mode .urp-kw-ko{color:#e8e8e8}
 body.dark-mode .urp-empty{color:#555}
 
 .svc-page{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;position:relative;background:transparent}
+#dotTextCanvas{position:fixed;top:50%;left:50%;transform:translate(-50%,-58%);z-index:1;pointer-events:none;opacity:0;transition:opacity 0.6s ease}
+#dotTextCanvas.visible{opacity:1}
 .svc-intro{text-align:center;max-width:560px;padding:0 30px}
 .svc-intro-num{font-size:11px;font-weight:600;color:#bbb;letter-spacing:0.15em;margin-bottom:16px}
 .svc-intro-title{font-size:clamp(28px,3.5vw,48px);font-weight:400;letter-spacing:-0.02em;margin-bottom:16px;color:#111}
@@ -1145,6 +1147,7 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
   <li id="mobileSignIn">SIGN IN</li>
 </div>
 <div id="canvas-container"></div>
+<canvas id="dotTextCanvas"></canvas>
 
 <!-- ABOUT -->
 <div class="page active" id="page-about">
@@ -1592,6 +1595,7 @@ document.getElementById('btnTheme').addEventListener('click',function(){
   isDark=document.body.classList.contains('dark-mode');
   localStorage.setItem('aletheia-theme',isDark?'dark':'light');
   if(window._alScene){window._alScene._c1Mat.color.setHex(isDark?0xffffff:0x000000);window._alScene._c2Mat.color.setHex(isDark?0xaaaaaa:0x555555)}
+  if(typeof drawDotText==='function')drawDotText(currentLang);
 });
 
 /* ============ i18n ============ */
@@ -1841,6 +1845,8 @@ function applyLang(){
   if(pcDescs[1])pcDescs[1].textContent=t('seekerDesc');
   /* Footer */
   var footerR=document.querySelector('footer div:last-child');if(footerR)footerR.textContent=t('footer');
+  /* Unmask dot-text 언어 반영 */
+  if(typeof drawDotText==='function')drawDotText(currentLang);
   /* Typing labels */
   var labels=document.querySelectorAll('.typing-target');
   if(labels[0])labels[0].setAttribute('data-text',t('aboutLabel1'));
@@ -1933,8 +1939,11 @@ function switchPage(page){
   if(page==='about'||page==='archive'){document.body.style.overflow='auto';el.style.overflow='auto'}else{document.body.style.overflow='hidden'}
   if(page==='unmask'){
     if(window._alScene)window._alScene.unmaskMode=true;
+    var _dtc=document.getElementById('dotTextCanvas');
+    if(_dtc){if(typeof drawDotText==='function')drawDotText(currentLang);_dtc.classList.add('visible')}
   }else{
     if(window._alScene)window._alScene.unmaskMode=false;
+    var _dtc2=document.getElementById('dotTextCanvas');if(_dtc2)_dtc2.classList.remove('visible');
   }
   /* 등장 모션 */
   el.querySelectorAll('.svc-anim').forEach(function(a){a.classList.remove('visible')});
@@ -3350,6 +3359,48 @@ if(edGenBtn)edGenBtn.addEventListener('click',generateEssenceDocument);
 })();
 </script>
 <script>
+/* ===== Dot-text Canvas2D (Unmask 텍스트를 점으로 표시) ===== */
+var _DOT_TEXT={
+  ko:{t1:'당신보다',t2:'당신을 잘 아는 지도.',s1:'Core에서 추출된 데이터 — 가치관, 패턴, 회피하는 것.',s2:'이 모든 것이 하나의 프로필로 합성됩니다.',
+    tf:'700 52px "Malgun Gothic","Apple SD Gothic Neo",sans-serif',sf:'300 20px "Malgun Gothic","Apple SD Gothic Neo",sans-serif'},
+  en:{t1:'A map that knows you',t2:'better than you.',s1:'Data extracted from Core \u2014 values, patterns, avoidance.',s2:'All synthesized into a single profile.',
+    tf:'700 56px "Helvetica Neue",Inter,Arial,sans-serif',sf:'300 20px "Helvetica Neue",Inter,Arial,sans-serif'},
+  es:{t1:'Un mapa que te conoce',t2:'mejor que tú.',s1:'Datos extraídos de Core \u2014 valores, patrones, evasión.',s2:'Todo sintetizado en un solo perfil.',
+    tf:'700 48px "Helvetica Neue",Inter,Arial,sans-serif',sf:'300 18px "Helvetica Neue",Inter,Arial,sans-serif'}
+};
+function drawDotText(lang){
+  var canvas=document.getElementById('dotTextCanvas');if(!canvas)return;
+  var tx=_DOT_TEXT[lang]||_DOT_TEXT['en'];
+  var W=640,H=220;
+  var dpr=Math.min(window.devicePixelRatio||1,2);
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  canvas.style.width=W+'px';canvas.style.height=H+'px';
+  var ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
+  /* 배경: 반투명 그라디언트로 파티클 위에서 글씨가 보이게 */
+  var isDark=document.body.classList.contains('dark-mode');
+  var bg=ctx.createRadialGradient(W/2,H/2,20,W/2,H/2,W*0.52);
+  bg.addColorStop(0,isDark?'rgba(10,10,10,0.55)':'rgba(250,250,248,0.5)');
+  bg.addColorStop(1,isDark?'rgba(10,10,10,0)':'rgba(250,250,248,0)');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  /* 오프스크린: 텍스트 렌더링 */
+  var off=document.createElement('canvas');off.width=W;off.height=H;
+  var ox=off.getContext('2d');
+  ox.fillStyle='#fff';ox.fillRect(0,0,W,H);
+  ox.fillStyle='#000';ox.textAlign='center';
+  ox.font=tx.tf;ox.fillText(tx.t1,W/2,58);ox.fillText(tx.t2,W/2,122);
+  ox.font=tx.sf;ox.fillText(tx.s1,W/2,172);ox.fillText(tx.s2,W/2,200);
+  var imgD=ox.getImageData(0,0,W,H).data;
+  /* 그리드 → 점 찍기 */
+  ctx.fillStyle=isDark?'rgba(220,220,220,0.85)':'rgba(20,20,20,0.75)';
+  var sp=2.5,r=0.85;
+  for(var y=0;y<H;y+=sp){for(var x=0;x<W;x+=sp){
+    var i=(Math.floor(y)*W+Math.floor(x))*4;var dk=1-(imgD[i]+imgD[i+1]+imgD[i+2])/(3*255);
+    if(dk>0.25){ctx.beginPath();ctx.arc(x,y,r,0,6.2832);ctx.fill()}
+  }}
+}
+/* 초기 렌더 (숨겨진 상태로 준비) */
+drawDotText(typeof currentLang!=='undefined'?currentLang:'ko');
+
 (function(){
 'use strict';
 try{
@@ -3374,7 +3425,6 @@ var initPosTex=createDataTex(initPosData);
 var silTargetData=new Float32Array(N*4);
 for(var _si=0;_si<N;_si++){var _u=Math.random();var _r=15+_u*_u*100;var _a=Math.random()*6.2831;var _b=Math.random()*3.1416;silTargetData[_si*4]=Math.sin(_b)*Math.cos(_a)*_r;silTargetData[_si*4+1]=Math.cos(_b)*_r*0.7;silTargetData[_si*4+2]=Math.sin(_b)*Math.sin(_a)*_r*0.4;silTargetData[_si*4+3]=-1.0}
 var silTargetTex=createDataTex(silTargetData);
-
 var rtOpts={minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter,format:THREE.RGBAFormat,type:THREE.FloatType};
 var rtA=new THREE.WebGLRenderTarget(SIZE,SIZE,rtOpts);var rtB=new THREE.WebGLRenderTarget(SIZE,SIZE,rtOpts);
 
@@ -3422,34 +3472,36 @@ var simFrag=[
 '}','',
 'void main(){',
 '  vec4 cur=texture2D(uPositions,vUv);vec4 init=texture2D(uInitPositions,vUv);vec4 target=texture2D(uSilTargets,vUv);',
-'  float seed=init.w;vec3 pos=cur.xyz;float isText=step(1.5,seed);',
+'  float seed=init.w;vec3 pos=cur.xyz;float isTextGlobal=step(1.4,target.w);',
 '  float mp=uMorph*uMorph*(3.0-2.0*uMorph);',
 '  vec3 nDir=normalize(init.xyz);',
 '  float surfN=snoise3(nDir*1.8+vec3(uTime*0.35))+snoise3(nDir*3.5+vec3(-uTime*0.2,uTime*0.25,seed*0.04))*0.35;',
 '  float breathe=sin(uTime*0.35)*0.08;',
-'  float targetR=length(init.xyz)*(1.0+surfN*mix(0.22,0.01,isText)+breathe*mix(1.0,0.05,isText));',
+'  float notTG=1.0-isTextGlobal;',
+'  float targetR=length(init.xyz)*(1.0+surfN*0.22*notTG+breathe*notTG);',
 '  vec3 homePos=nDir*targetR;',
 '  float cR=cos(uRotAngle);float sR=sin(uRotAngle);',
 '  homePos=vec3(homePos.x*cR-homePos.z*sR,homePos.y,homePos.x*sR+homePos.z*cR);',
 '  vec3 curlP=pos*0.012;vec3 curl=curlNoise(curlP,uTime*0.15+seed*5.0);',
 '  vec3 posNorm=normalize(pos+0.001);vec3 tangentCurl=curl-posNorm*dot(curl,posNorm);',
-'  vec3 curlForce=tangentCurl*mix(3.0,0.12,isText)*(1.0-mp);',
-'  vec3 homeForce=(homePos-pos)*mix(0.08,0.45,isText)*(1.0-mp);',
+'  vec3 curlForce=tangentCurl*3.0*notTG*(1.0-mp);',
+'  vec3 homeForce=(homePos-pos)*0.08*notTG*(1.0-mp);',
 '  vec3 silPos=target.xyz;float silDensity=target.w;',
 '  float isAmbient=step(silDensity,-0.5);vec3 silForce=vec3(0.0);',
 '  float isOrbit=step(-0.5,silDensity)*step(silDensity,-0.01);',
 '  if(isAmbient<0.5 && isOrbit<0.5){',
 '    float looseness=(1.0-silDensity)*(1.0-silDensity);',
+'    float isTP=step(1.4,silDensity);float notTP=1.0-isTP;',
 '    float pn=snoise3(vec3(seed*50.0,seed*30.0,uTime*0.10));',
-'    silPos.x+=pn*looseness*1.5*mp;silPos.y+=sin(uTime*0.18+seed*20.0)*looseness*0.8*mp;silPos.z+=cos(uTime*0.15+seed*15.0)*looseness*1.0*mp;',
+'    silPos.x+=pn*looseness*1.5*mp*notTP;silPos.y+=sin(uTime*0.18+seed*20.0)*looseness*0.8*mp*notTP;silPos.z+=cos(uTime*0.15+seed*15.0)*looseness*1.0*mp*notTP;',
 '    float figPhase=silPos.x*0.02+silPos.y*0.015;',
 '    float swayX=sin(uTime*0.12+figPhase)*2.5+sin(uTime*0.07+figPhase*1.3)*1.2;',
 '    float swayY=cos(uTime*0.10+figPhase*0.8)*1.8+sin(uTime*0.06+figPhase*0.5)*0.8;',
 '    float swayZ=sin(uTime*0.09+figPhase*1.1)*1.5;',
 '    float swayAmt=0.3+looseness*0.7;',
-'    silPos.x+=swayX*swayAmt*mp;silPos.y+=swayY*swayAmt*mp;silPos.z+=swayZ*swayAmt*mp;',
-'    float isTP=step(1.4,silDensity);float tBob=sin(uTime*8.0+seed*6.28)*0.8+sin(uTime*5.0+seed*3.14)*0.5;silPos.y+=tBob*isTP*mp;',
-'    float attractStr=0.06+min(silDensity,1.0)*0.40;silForce=(silPos-pos)*attractStr*mp;',
+'    silPos.x+=swayX*swayAmt*mp*notTP;silPos.y+=swayY*swayAmt*mp*notTP;silPos.z+=swayZ*swayAmt*mp*notTP;',
+'    /* 텍스트 파티클: 움직임 없이 고정 */',
+'    float attractStr=mix(0.06+min(silDensity,1.0)*0.40,0.95,isTP);silForce=(silPos-pos)*attractStr*mp;',
 '  }else if(isOrbit>0.5){',
 '    float orbitDist=abs(silDensity);float spd1=0.025+seed*0.035;float spd2=0.02+orbitDist*0.05;',
 '    float a1=uTime*spd1+seed*6.2831;float a2=uTime*spd2+seed*3.14+orbitDist*10.0;',
@@ -3460,7 +3512,7 @@ var simFrag=[
 '    float oAngle=uTime*(0.03+seed*0.05)+seed*6.28;float oR=3.0+seed*8.0;',
 '    vec3 drift=silPos+vec3(cos(oAngle)*oR,sin(oAngle*0.6+seed)*oR*0.25,sin(oAngle*0.8)*oR);silForce=(drift-pos)*0.02*mp;',
 '  }',
-'  if(uMouseActive>0.5){vec3 toP=pos-uMouse3D;float mDist=length(toP);float mRad=mix(25.0,55.0,mp);if(mDist<mRad&&mDist>0.1){float push=1.0-mDist/mRad;push=push*push*push;pos+=normalize(toP)*push*8.0;}}',
+'  if(uMouseActive>0.5&&isTextGlobal<0.5){vec3 toP=pos-uMouse3D;float mDist=length(toP);float mRad=mix(25.0,55.0,mp);if(mDist<mRad&&mDist>0.1){float push=1.0-mDist/mRad;push=push*push*push;pos+=normalize(toP)*push*8.0;}}',
 '  pos+=curlForce+homeForce+silForce;gl_FragColor=vec4(pos,cur.w);',
 '}'
 ].join('\n');
@@ -3485,12 +3537,12 @@ var renderVert=[
 '  float mp=uMorph*uMorph*(3.0-2.0*uMorph);vMorph=mp;',
 '  float density=silData.w;float absDen=max(density,0.0);float isAmb=step(density,-0.5);',
 '  float isOrb=step(-0.5,density)*step(density,-0.01);',
-'  float coreSize=3.0;float figSize=1.8+absDen*1.2;float orbSize=1.2+abs(density)*1.6;float ambSize=0.8;',
-'  float unmaskSize=mix(mix(figSize,orbSize,isOrb),ambSize,isAmb);float sz=mix(coreSize,unmaskSize,mp);',
+'  float coreSize=3.0;float isText=step(1.4,density);float figSize=1.8+absDen*1.2;float textSize=2.2;float orbSize=1.2+abs(density)*1.6;float ambSize=0.8;',
+'  float unmaskSize=mix(mix(mix(figSize,textSize,isText),orbSize,isOrb),ambSize,isAmb);float sz=mix(coreSize,unmaskSize,mp);',
 '  float depthScale=340.0/max(-mvPos.z,100.0);gl_PointSize=sz*uPixelRatio*depthScale;gl_PointSize=max(gl_PointSize,0.5);',
-'  float coreAlpha=mix(0.15,0.35,posData.w);float figAlpha=0.2+absDen*0.35;',
+'  float coreAlpha=mix(0.15,0.35,posData.w);float figAlpha=0.2+absDen*0.35;float textAlpha=0.7;',
 '  float orbAlpha=0.06+abs(density)*0.18;float ambAlpha=0.03;',
-'  float unmaskAlpha=mix(mix(figAlpha,orbAlpha,isOrb),ambAlpha,isAmb);',
+'  float unmaskAlpha=mix(mix(mix(figAlpha,textAlpha,isText),orbAlpha,isOrb),ambAlpha,isAmb);',
 '  vAlpha=mix(coreAlpha,max(unmaskAlpha,0.01),mp);vDensity=density;',
 '}'
 ].join('\n');
@@ -3549,13 +3601,7 @@ function buildFromImage(){
       /* 배경 흰색 강화 + 손 부분 대비 높이기 */
       var px=imgData.data;for(var pi2=0;pi2<px.length;pi2+=4){var br=(px[pi2]+px[pi2+1]+px[pi2+2])/3;if(br>210){px[pi2]=px[pi2+1]=px[pi2+2]=255}else if(br<190){var cF=0.6;px[pi2]=Math.round(px[pi2]*cF);px[pi2+1]=Math.round(px[pi2+1]*cF);px[pi2+2]=Math.round(px[pi2+2]*cF)}}
       var count=sampleFigure(imgData.data,W,H,fig,placed);console.log('[Aletheia] Fig '+fi+': '+count+'/'+fig.budget);placed+=count}
-    /* Unmask 텍스트를 점으로 구성 */
-    var _utC=document.createElement('canvas');_utC.width=1800;_utC.height=500;var _utX=_utC.getContext('2d');_utX.fillStyle='#fff';_utX.fillRect(0,0,1800,500);_utX.fillStyle='#000';_utX.textAlign='center';
-    _utX.font='600 74px "Helvetica Neue",Inter,Arial,sans-serif';_utX.fillText('A map that knows you',900,120);_utX.fillText('better than you.',900,210);
-    _utX.font='300 32px "Helvetica Neue",Inter,Arial,sans-serif';_utX.fillText('Data extracted from Core \u2014 values, patterns, avoidance.',900,340);_utX.fillText('All synthesized into a single profile.',900,385);
-    var _utD=_utX.getImageData(0,0,1800,500).data;var _utBudget=Math.floor(40000*_budgetMul),_utp=0,_uta=0,_utScale=0.16,_utOffY=0.12*320*0.6;
-    while(_utp<_utBudget&&_uta<_utBudget*400){var _ux=Math.floor(Math.random()*1800),_uy=Math.floor(Math.random()*500),_ui=(_uy*1800+_ux)*4;var _ud=1-(_utD[_ui]+_utD[_ui+1]+_utD[_ui+2])/(3*255);if(_ud>0.3&&Math.random()<_ud){var _px=(_ux-900)*_utScale,_py=-(_uy-250)*_utScale+_utOffY;silTargetData[(placed+_utp)*4]=_px;silTargetData[(placed+_utp)*4+1]=_py;silTargetData[(placed+_utp)*4+2]=(Math.random()-0.5)*2;silTargetData[(placed+_utp)*4+3]=1.6+_ud*0.4;_utp++}_uta++}
-    console.log('[Aletheia] Text particles:',_utp);placed+=_utp;
+    /* 텍스트는 Canvas2D dot overlay로 표시 (Three.js 파티클 아님) */
     var dissEnd=placed+DISSOLVE_BUDGET;
     while(placed<dissEnd){var rfi=Math.floor(Math.random()*FIGURES.length);var rf=FIGURES[rfi];var worldSpan=320;var r=Math.random();var bx,by,bz;
       if(r<0.35){bx=rf.cx*worldSpan+(Math.random()-0.5)*rf.h3d*1.2;by=rf.cy*worldSpan*0.6+(Math.random()-0.5)*rf.h3d*0.8;bz=(Math.random()-0.5)*rf.h3d*0.5}

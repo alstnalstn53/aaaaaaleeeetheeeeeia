@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callClaude } from '@/lib/claude';
 
+export const maxDuration = 30;
+
 export async function POST(request: NextRequest) {
   try {
     const { freeResponse, childhood, scenario, sliderData } = await request.json();

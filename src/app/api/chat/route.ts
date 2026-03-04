@@ -3,6 +3,8 @@ import { callClaude } from '@/lib/claude';
 import { createServerSupabase } from '@/lib/supabase';
 import type { PromptMode } from '@/lib/prompts';
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     const { mode, messages, max_tokens, sessionId, userId } = await request.json();

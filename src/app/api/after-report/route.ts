@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callClaude } from '@/lib/claude';
 
+export const maxDuration = 45;
+
 export async function POST(request: NextRequest) {
   try {
     const { discoveryData, conversationHistory } = await request.json();

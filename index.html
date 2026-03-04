@@ -3447,7 +3447,8 @@ var simFrag=[
 '    float swayZ=sin(uTime*0.09+figPhase*1.1)*1.5;',
 '    float swayAmt=0.3+looseness*0.7;',
 '    silPos.x+=swayX*swayAmt*mp;silPos.y+=swayY*swayAmt*mp;silPos.z+=swayZ*swayAmt*mp;',
-'    float attractStr=0.06+silDensity*0.40;silForce=(silPos-pos)*attractStr*mp;',
+'    float isTP=step(1.4,silDensity);float tBob=sin(uTime*10.0+silPos.x*0.02)*6.0+sin(uTime*6.5+silPos.x*0.035)*3.5;silPos.y+=tBob*isTP*mp;',
+'    float attractStr=0.06+min(silDensity,1.0)*0.40;silForce=(silPos-pos)*attractStr*mp;',
 '  }else if(isOrbit>0.5){',
 '    float orbitDist=abs(silDensity);float spd1=0.025+seed*0.035;float spd2=0.02+orbitDist*0.05;',
 '    float a1=uTime*spd1+seed*6.2831;float a2=uTime*spd2+seed*3.14+orbitDist*10.0;',
@@ -3552,7 +3553,7 @@ function buildFromImage(){
     _utX.font='600 74px "Helvetica Neue",Inter,Arial,sans-serif';_utX.fillText('A map that knows you',900,120);_utX.fillText('better than you.',900,210);
     _utX.font='300 32px "Helvetica Neue",Inter,Arial,sans-serif';_utX.fillText('Data extracted from Core \u2014 values, patterns, avoidance.',900,340);_utX.fillText('All synthesized into a single profile.',900,385);
     var _utD=_utX.getImageData(0,0,1800,500).data;var _utBudget=Math.floor(40000*_budgetMul),_utp=0,_uta=0,_utScale=0.16,_utOffY=0.12*320*0.6;
-    while(_utp<_utBudget&&_uta<_utBudget*400){var _ux=Math.floor(Math.random()*1800),_uy=Math.floor(Math.random()*500),_ui=(_uy*1800+_ux)*4;var _ud=1-(_utD[_ui]+_utD[_ui+1]+_utD[_ui+2])/(3*255);if(_ud>0.3&&Math.random()<_ud){var _px=(_ux-900)*_utScale,_py=-(_uy-250)*_utScale+_utOffY;silTargetData[(placed+_utp)*4]=_px;silTargetData[(placed+_utp)*4+1]=_py;silTargetData[(placed+_utp)*4+2]=(Math.random()-0.5)*2;silTargetData[(placed+_utp)*4+3]=0.80+_ud*0.20;_utp++}_uta++}
+    while(_utp<_utBudget&&_uta<_utBudget*400){var _ux=Math.floor(Math.random()*1800),_uy=Math.floor(Math.random()*500),_ui=(_uy*1800+_ux)*4;var _ud=1-(_utD[_ui]+_utD[_ui+1]+_utD[_ui+2])/(3*255);if(_ud>0.3&&Math.random()<_ud){var _px=(_ux-900)*_utScale,_py=-(_uy-250)*_utScale+_utOffY;silTargetData[(placed+_utp)*4]=_px;silTargetData[(placed+_utp)*4+1]=_py;silTargetData[(placed+_utp)*4+2]=(Math.random()-0.5)*2;silTargetData[(placed+_utp)*4+3]=1.6+_ud*0.4;_utp++}_uta++}
     console.log('[Aletheia] Text particles:',_utp);placed+=_utp;
     var dissEnd=placed+DISSOLVE_BUDGET;
     while(placed<dissEnd){var rfi=Math.floor(Math.random()*FIGURES.length);var rf=FIGURES[rfi];var worldSpan=320;var r=Math.random();var bx,by,bz;

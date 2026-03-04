@@ -395,7 +395,7 @@ void main(){
         let placed = 0;
         const handImg = loadedImgs[HAND_IMG_SRC];
         if (handImg) {
-          const maxDim = 700;
+          const maxDim = 800;
           const sc = maxDim / Math.max(handImg.width, handImg.height);
           const W = Math.round(handImg.width * sc);
           const H = Math.round(handImg.height * sc);
@@ -404,10 +404,27 @@ void main(){
           const ctx = cvs.getContext('2d')!;
           ctx.drawImage(handImg, 0, 0, W, H);
           const imgData = ctx.getImageData(0, 0, W, H);
+
+          // Enhance contrast: clean background noise, darken the hand
+          const px = imgData.data;
+          for (let j = 0; j < px.length; j += 4) {
+            const br = (px[j] + px[j + 1] + px[j + 2]) / 3;
+            if (br > 200) {
+              // Background → pure white (ignored by sampler)
+              px[j] = px[j + 1] = px[j + 2] = 255;
+            } else if (br < 180) {
+              // Hand → darken for stronger density
+              const f = 0.65;
+              px[j] = Math.round(px[j] * f);
+              px[j + 1] = Math.round(px[j + 1] * f);
+              px[j + 2] = Math.round(px[j + 2] * f);
+            }
+          }
+
           placed = sampleFromImageData(
             imgData.data, W, H,
-            0, 15, 0,
-            180,
+            0, 10, 0,
+            280,
             HAND_BUDGET,
             1.0,
             0
@@ -474,6 +491,10 @@ void main(){
         silTargetTex = createDataTex(silTargetData);
         simMat.uniforms.uSilTargets.value = silTargetTex;
         renderUniforms.uSilTargets.value = silTargetTex;
+
+        // Reset morph timer so animation starts AFTER images are ready
+        imagesReady = true;
+        morphStartTime = performance.now() / 1000;
       }
 
       for (const src of allSrcs) {
@@ -508,12 +529,13 @@ void main(){
       let mouseTimer: ReturnType<typeof setTimeout>;
       const raycaster = new THREE.Raycaster();
 
-      // Morph animation timing
-      const MORPH_DELAY = 1.5;      // seconds before morph starts
+      // Morph animation timing — starts after images are loaded
+      const MORPH_DELAY = 0.5;      // short delay after images ready
       const MORPH_DURATION = 4.0;   // seconds for full morph (스르르르륵)
-      const HAND_GLOW_DELAY = 3.5;  // hand glow starts after morph is mostly done
+      const HAND_GLOW_DELAY = 3.0;  // hand glow starts after morph is mostly done
       const HAND_GLOW_DURATION = 2.0;
-      const startTime = performance.now() / 1000;
+      let imagesReady = false;
+      let morphStartTime = 0;
 
       const onMouseMove = (e: MouseEvent) => {
         mouseNDC.x = (e.clientX / innerWidth) * 2 - 1;
@@ -530,21 +552,23 @@ void main(){
         time += 0.0018;
         rotAngle += 0.0002;
 
-        const elapsed = performance.now() / 1000 - startTime;
-
-        // Smooth morph: 0 → 1 over MORPH_DURATION after MORPH_DELAY
+        // Morph only starts after images are loaded
         let morphTarget = 0;
-        if (elapsed > MORPH_DELAY) {
-          const t = Math.min((elapsed - MORPH_DELAY) / MORPH_DURATION, 1);
-          // Ease out expo for smooth "스르르르륵" feel
-          morphTarget = 1 - Math.pow(1 - t, 3);
-        }
-
-        // Hand glow reveal: 0 → 1 (사라라락 effect on fingertips)
         let handReveal = 0;
-        if (elapsed > HAND_GLOW_DELAY) {
-          const t = Math.min((elapsed - HAND_GLOW_DELAY) / HAND_GLOW_DURATION, 1);
-          handReveal = t * t; // ease-in for gentle appear
+        if (imagesReady) {
+          const elapsed = performance.now() / 1000 - morphStartTime;
+
+          // Smooth morph: 0 → 1 over MORPH_DURATION after MORPH_DELAY
+          if (elapsed > MORPH_DELAY) {
+            const t = Math.min((elapsed - MORPH_DELAY) / MORPH_DURATION, 1);
+            morphTarget = 1 - Math.pow(1 - t, 3);
+          }
+
+          // Hand glow reveal: 0 → 1 (사라라락 effect on fingertips)
+          if (elapsed > HAND_GLOW_DELAY) {
+            const t = Math.min((elapsed - HAND_GLOW_DELAY) / HAND_GLOW_DURATION, 1);
+            handReveal = t * t;
+          }
         }
 
         simMat.uniforms.uPositions.value = flip ? rtB.texture : rtA.texture;

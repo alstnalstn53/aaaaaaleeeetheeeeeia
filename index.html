@@ -3365,12 +3365,9 @@ var SIZE=_isMobile?280:400;
 var N=SIZE*SIZE;
 function createDataTex(data){var t=new THREE.DataTexture(data,SIZE,SIZE,THREE.RGBAFormat,THREE.FloatType);t.needsUpdate=true;return t}
 
-/* 텍스트 파티클 초기 위치 — "Aletheia"를 점으로 구성 */
-var _tC=document.createElement('canvas');_tC.width=1400;_tC.height=300;var _tX=_tC.getContext('2d');_tX.fillStyle='#fff';_tX.fillRect(0,0,1400,300);_tX.fillStyle='#000';_tX.font='600 160px "Helvetica Neue",Inter,Arial,sans-serif';_tX.textAlign='center';_tX.textBaseline='middle';_tX.fillText('Aletheia',700,150);var _tD=_tX.getImageData(0,0,1400,300).data;
-var initPosData=new Float32Array(N*4);var _tB=Math.floor(N*0.55),_tp=0,_ta=0;
-while(_tp<_tB&&_ta<_tB*400){var _ix=Math.floor(Math.random()*1400),_iy=Math.floor(Math.random()*300),_ti=(_iy*1400+_ix)*4;var _dk=1-(_tD[_ti]+_tD[_ti+1]+_tD[_ti+2])/(3*255);if(_dk>0.3&&Math.random()<_dk*_dk){initPosData[_tp*4]=(_ix-700)*0.28;initPosData[_tp*4+1]=-(_iy-150)*0.28+18;initPosData[_tp*4+2]=(Math.random()-0.5)*2;initPosData[_tp*4+3]=2.0+Math.random()*0.5;_tp++}_ta++}
-console.log('[Aletheia] Text particles:',_tp);
-for(var i=_tp;i<N;i++){var phi=Math.acos(1-2*(i+0.5)/N);var theta=Math.PI*(1+Math.sqrt(5))*i;var u=Math.random();var R=50+u*u*160;initPosData[i*4]=Math.sin(phi)*Math.cos(theta)*R;initPosData[i*4+1]=Math.cos(phi)*R;initPosData[i*4+2]=Math.sin(phi)*Math.sin(theta)*R;initPosData[i*4+3]=Math.random()*0.5}
+/* 초기 위치 — 넓게 분산 */
+var initPosData=new Float32Array(N*4);
+for(var i=0;i<N;i++){var phi=Math.acos(1-2*(i+0.5)/N);var theta=Math.PI*(1+Math.sqrt(5))*i;var u=Math.random();var R=40+u*u*140;initPosData[i*4]=Math.sin(phi)*Math.cos(theta)*R;initPosData[i*4+1]=Math.cos(phi)*R;initPosData[i*4+2]=Math.sin(phi)*Math.sin(theta)*R;initPosData[i*4+3]=Math.random()}
 var initPosTex=createDataTex(initPosData);
 
 var silTargetData=new Float32Array(N*4);
@@ -3519,7 +3516,7 @@ var pts=new THREE.Points(pGeo,renderMat);scene.add(pts);
 /* 멀티 피겨 컴포지션 */
 var _budgetMul=_isMobile?0.5:1.0;
 var FIGURES=[
-  {src:'./images/hand.png',cx:0,cy:-0.22,h3d:220,budget:Math.floor(110000*_budgetMul)}
+  {src:'./images/hand.png',cx:0,cy:-0.22,h3d:200,budget:Math.floor(75000*_budgetMul)}
 ];
 var totalBudget=0;for(var fi=0;fi<FIGURES.length;fi++)totalBudget+=FIGURES[fi].budget;
 var DISSOLVE_BUDGET=Math.floor(N*0.22);var AMBIENT_BUDGET=N-totalBudget-DISSOLVE_BUDGET;
@@ -3550,6 +3547,13 @@ function buildFromImage(){
       /* 배경 흰색 강화 + 손 부분 대비 높이기 */
       var px=imgData.data;for(var pi2=0;pi2<px.length;pi2+=4){var br=(px[pi2]+px[pi2+1]+px[pi2+2])/3;if(br>210){px[pi2]=px[pi2+1]=px[pi2+2]=255}else if(br<190){var cF=0.6;px[pi2]=Math.round(px[pi2]*cF);px[pi2+1]=Math.round(px[pi2+1]*cF);px[pi2+2]=Math.round(px[pi2+2]*cF)}}
       var count=sampleFigure(imgData.data,W,H,fig,placed);console.log('[Aletheia] Fig '+fi+': '+count+'/'+fig.budget);placed+=count}
+    /* Unmask 텍스트를 점으로 구성 */
+    var _utC=document.createElement('canvas');_utC.width=1600;_utC.height=450;var _utX=_utC.getContext('2d');_utX.fillStyle='#fff';_utX.fillRect(0,0,1600,450);_utX.fillStyle='#000';_utX.textAlign='center';
+    _utX.font='600 56px "Helvetica Neue",Inter,Arial,sans-serif';_utX.fillText('A map that knows you',800,100);_utX.fillText('better than you.',800,170);
+    _utX.font='300 26px "Helvetica Neue",Inter,Arial,sans-serif';_utX.fillText('Data extracted from Core \u2014 values, patterns, avoidance.',800,300);_utX.fillText('All synthesized into a single profile.',800,340);
+    var _utD=_utX.getImageData(0,0,1600,450).data;var _utBudget=Math.floor(35000*_budgetMul),_utp=0,_uta=0,_utScale=0.14,_utOffY=0.18*320*0.6;
+    while(_utp<_utBudget&&_uta<_utBudget*400){var _ux=Math.floor(Math.random()*1600),_uy=Math.floor(Math.random()*450),_ui=(_uy*1600+_ux)*4;var _ud=1-(_utD[_ui]+_utD[_ui+1]+_utD[_ui+2])/(3*255);if(_ud>0.3&&Math.random()<_ud){var _px=(_ux-800)*_utScale,_py=-(_uy-225)*_utScale+_utOffY;silTargetData[(placed+_utp)*4]=_px;silTargetData[(placed+_utp)*4+1]=_py;silTargetData[(placed+_utp)*4+2]=(Math.random()-0.5)*2;silTargetData[(placed+_utp)*4+3]=0.75+_ud*0.25;_utp++}_uta++}
+    console.log('[Aletheia] Text particles:',_utp);placed+=_utp;
     var dissEnd=placed+DISSOLVE_BUDGET;
     while(placed<dissEnd){var rfi=Math.floor(Math.random()*FIGURES.length);var rf=FIGURES[rfi];var worldSpan=320;var r=Math.random();var bx,by,bz;
       if(r<0.35){bx=rf.cx*worldSpan+(Math.random()-0.5)*rf.h3d*1.2;by=rf.cy*worldSpan*0.6+(Math.random()-0.5)*rf.h3d*0.8;bz=(Math.random()-0.5)*rf.h3d*0.5}

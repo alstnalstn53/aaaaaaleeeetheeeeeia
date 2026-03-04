@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aletheia — Interactive Particle Test</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#f4f4f2;overflow:hidden;font-family:'Helvetica Neue',Arial,sans-serif}
+  canvas{display:block}
+  .ui{position:fixed;bottom:36px;left:50%;transform:translateX(-50%);z-index:10;display:flex;gap:24px;align-items:center}
+  .ui-btn{background:none;border:none;font-family:inherit;font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:#bbb;cursor:pointer;padding:8px 16px;transition:color .6s ease}
+  .ui-btn:hover{color:#888}
+  .ui-btn.active{color:#333}
+  .ui-sep{width:1px;height:14px;background:#ddd}
+  .top-label{position:fixed;top:32px;left:50%;transform:translateX(-50%);z-index:10;font-size:9px;letter-spacing:.5em;text-transform:uppercase;color:#ccc;pointer-events:none;transition:color .6s}
+  #loading{position:fixed;inset:0;background:#f4f4f2;display:flex;align-items:center;justify-content:center;z-index:100;font-size:10px;letter-spacing:.3em;color:#ccc;text-transform:uppercase;transition:opacity .8s}
+  #loading.hide{opacity:0;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="loading">Loading...</div>
+<div id="ct"></div>
+<div class="top-label">Aletheia</div>
+<div class="ui">
+  <button class="ui-btn active" id="bC" onclick="SM('core')">Core</button>
+  <div class="ui-sep"></div>
+  <button class="ui-btn" id="bU" onclick="SM('unmask')">Unmask</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ╔══════════════════════════════════════════════════════╗
+   ║  CONFIG — 여기서 파라미터 조정                          ║
+   ╚══════════════════════════════════════════════════════╝ */
+var CONFIG = {
+  // FBO resolution (SIZE×SIZE particles)
+  fboSize: 256,             // 256×256 = 65536 particles
+
+  // Core sphere
+  sphereRadius: 80,
+  sphereRvarMin: 0.93,
+  sphereRvarMax: 1.07,
+  sphereNoiseAmt: 0.12,        // surface ripple intensity
+  sphereNoiseSpeed: 0.20,      // how fast surface evolves
+  sphereRotSpeed: 0.12,        // slow meditative rotation
+  curlStrength: 3.5,           // curl noise flow on surface (organic swirl)
+  curlScale: 0.012,            // curl noise frequency
+  curlSpeed: 0.15,             // curl evolution speed
+  breatheAmt: 0.03,            // sphere breathing (expand/contract)
+  breatheSpeed: 0.4,           // breathing cycle speed
+  sphereBoundForce: 0.06,      // how firmly particles stay on sphere surface
+
+  // Core particle visual
+  coreParticleBase: 1.6,
+  coreAlphaMin: 0.25,
+  coreAlphaMax: 0.6,
+
+  // Silhouette
+  silImage: 'silhouette.jpg',
+  silWorldWidth: 240,
+  silWorldHeight: 340,
+  silDriftSpeed: 0.04,
+
+  // Particle rendering
+  unmaskParticleBase: 2.4,
+  unmaskAlpha: 0.45,
+
+  // Blur pipeline
+  blurPasses: 5,
+  blurSpread: 1.6,
+
+  // Morph
+  morphSpeed: 0.015,
+
+  // Mouse
+  mouseForce: 0.6,
+  mouseRadius: 0.22,
+
+  // Background
+  bgColor: 0xf4f4f2
+};
+
+var SIZE = CONFIG.fboSize;
+var N = SIZE * SIZE;
+
+/* ════════════════════════════════════════════════════════
+   STEP 1: Load silhouette image → density map → target positions
+   ════════════════════════════════════════════════════════ */
+
+function loadSilhouette(callback){
+  var img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = function(){ processDensityMap(img, callback); };
+  img.onerror = function(){
+    console.warn('Silhouette image not found, generating fallback');
+    var fc = document.createElement('canvas');
+    fc.width = 512; fc.height = 700;
+    var fx = fc.getContext('2d');
+    fx.fillStyle = '#fff';
+    fx.fillRect(0,0,512,700);
+    function blob(cx,cy,w,h,a){
+      for(var i=0;i<15;i++){
+        var g=fx.createRadialGradient(
+          cx+(Math.random()-.5)*w*.3, cy+(Math.random()-.5)*h*.15,0,
+          cx,cy,Math.max(w,h)*.55
+        );
+        g.addColorStop(0,'rgba(0,0,0,'+(a*.12)+')');
+        g.addColorStop(.25,'rgba(0,0,0,'+(a*.08)+')');
+        g.addColorStop(.5,'rgba(0,0,0,'+(a*.03)+')');
+        g.addColorStop(.8,'rgba(0,0,0,'+(a*.008)+')');
+        g.addColorStop(1,'rgba(0,0,0,0)');
+        fx.fillStyle=g;
+        fx.beginPath();
+        fx.ellipse(cx+(Math.random()-.5)*w*.1, cy+(Math.random()-.5)*h*.05,
+                   w*(.35+Math.random()*.15), h*(.4+Math.random()*.1),
+                   (Math.random()-.5)*.3, 0, Math.PI*2);
+        fx.fill();
+      }
+    }
+    // Main two figures
+    blob(200, 310, 100, 280, 1.0);
+    blob(320, 330, 80, 260, 0.8);
+    // Background figures
+    blob(85, 360, 45, 160, 0.3);
+    blob(440, 350, 40, 150, 0.25);
+    processDensityMap(fc, callback);
+  };
+  img.src = CONFIG.silImage;
+}
+
+function processDensityMap(source, callback){
+  var dc = document.createElement('canvas');
+  var dw, dh;
+  if(source instanceof HTMLCanvasElement){
+    dw = source.width; dh = source.height;
+    dc.width = dw; dc.height = dh;
+    dc.getContext('2d').drawImage(source, 0, 0);
+  } else {
+    dw = source.naturalWidth; dh = source.naturalHeight;
+    var maxDim = 600;
+    var ratio = Math.min(maxDim/dw, maxDim/dh, 1);
+    dw = Math.floor(dw * ratio); dh = Math.floor(dh * ratio);
+    dc.width = dw; dc.height = dh;
+    dc.getContext('2d').drawImage(source, 0, 0, dw, dh);
+  }
+
+  var imgData = dc.getContext('2d').getImageData(0, 0, dw, dh).data;
+
+  function getDensity(px, py){
+    var ix = Math.floor(px), iy = Math.floor(py);
+    if(ix<0||ix>=dw||iy<0||iy>=dh) return 0;
+    var idx = (iy*dw+ix)*4;
+    return 1 - (imgData[idx] + imgData[idx+1] + imgData[idx+2]) / 765;
+  }
+
+  // Rejection sampling
+  var silData = new Float32Array(N * 4);
+  var placed = 0, attempts = 0, maxAtt = N * 100;
+
+  while(placed < N && attempts < maxAtt){
+    var px = Math.random() * dw;
+    var py = Math.random() * dh;
+    var d = getDensity(px, py);
+    if(Math.random() < d * d * 1.8){
+      silData[placed*4]   = (px/dw - 0.5) * CONFIG.silWorldWidth;
+      silData[placed*4+1] = -(py/dh - 0.5) * CONFIG.silWorldHeight;
+      silData[placed*4+2] = (Math.random()-0.5) * 4;
+      silData[placed*4+3] = d; // density for alpha
+      placed++;
+    }
+    attempts++;
+  }
+  // Fill remaining
+  while(placed < N){
+    var px = Math.random()*dw, py = Math.random()*dh;
+    silData[placed*4]   = (px/dw-.5)*CONFIG.silWorldWidth;
+    silData[placed*4+1] = -(py/dh-.5)*CONFIG.silWorldHeight;
+    silData[placed*4+2] = 0;
+    silData[placed*4+3] = getDensity(px,py)*0.2;
+    placed++;
+  }
+
+  callback(silData);
+}
+
+/* ════════════════════════════════════════════════════════
+   STEP 2: Main initialization
+   ════════════════════════════════════════════════════════ */
+
+loadSilhouette(function(silData){
+  document.getElementById('loading').classList.add('hide');
+
+  var ct = document.getElementById('ct');
+  var W = innerWidth, H = innerHeight;
+
+  // Scene
+  var scene = new THREE.Scene();
+  var bgC = new THREE.Color(CONFIG.bgColor);
+  scene.background = bgC.clone();
+  scene.fog = new THREE.FogExp2(bgC.clone(), 0.0015);
+
+  var camera = new THREE.PerspectiveCamera(65, W/H, 1, 2000);
+  camera.position.z = 280;
+
+  var renderer = new THREE.WebGLRenderer({antialias: false, alpha: false});
+  renderer.setSize(W, H);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  ct.appendChild(renderer.domElement);
+
+  var pr = renderer.getPixelRatio();
+
+  /* ═══ FBO Data Textures ═══ */
+  function createDataTex(data){
+    var t = new THREE.DataTexture(data, SIZE, SIZE, THREE.RGBAFormat, THREE.FloatType);
+    t.needsUpdate = true;
+    return t;
+  }
+
+  // Initial sphere positions
+  var initData = new Float32Array(N * 4);
+  for(var i = 0; i < N; i++){
+    var phi = Math.acos(1 - 2*(i+0.5)/N);
+    var theta = Math.PI * (1 + Math.sqrt(5)) * i;
+    var rVar = CONFIG.sphereRvarMin + Math.random() * (CONFIG.sphereRvarMax - CONFIG.sphereRvarMin);
+    var R = CONFIG.sphereRadius * rVar;
+    initData[i*4]   = Math.sin(phi)*Math.cos(theta) * R;
+    initData[i*4+1] = Math.cos(phi) * R;
+    initData[i*4+2] = Math.sin(phi)*Math.sin(theta) * R;
+    initData[i*4+3] = Math.random(); // seed
+  }
+  var initTex = createDataTex(initData);
+  var silTex = createDataTex(silData);
+
+  // Ping-pong render targets
+  var rtOpts = {minFilter:THREE.NearestFilter, magFilter:THREE.NearestFilter,
+                format:THREE.RGBAFormat, type:THREE.FloatType};
+  var rtA = new THREE.WebGLRenderTarget(SIZE, SIZE, rtOpts);
+  var rtB = new THREE.WebGLRenderTarget(SIZE, SIZE, rtOpts);
+
+  /* ═══ Simulation Shader ═══ */
+  var simVert = 'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position,1.0);}';
+  var simFrag = [
+    'precision highp float;',
+    'varying vec2 vUv;',
+    'uniform sampler2D uPositions;',
+    'uniform sampler2D uInitPositions;',
+    'uniform sampler2D uSilTargets;',
+    'uniform float uTime;',
+    'uniform float uMorph;',
+    'uniform float uRotAngle;',
+    '',
+    '// Simplex 3D noise',
+    'vec3 mod289(vec3 x){return x-floor(x/289.0)*289.0;}',
+    'vec4 mod289v4(vec4 x){return x-floor(x/289.0)*289.0;}',
+    'vec4 permute(vec4 x){return mod289v4(((x*34.0)+1.0)*x);}',
+    'vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}',
+    'float snoise3(vec3 v){',
+    '  const vec2 C=vec2(1.0/6.0,1.0/3.0);const vec4 D=vec4(0.0,0.5,1.0,2.0);',
+    '  vec3 i=floor(v+dot(v,C.yyy));vec3 x0=v-i+dot(i,C.xxx);',
+    '  vec3 g=step(x0.yzx,x0.xyz);vec3 l=1.0-g;',
+    '  vec3 i1=min(g.xyz,l.zxy);vec3 i2=max(g.xyz,l.zxy);',
+    '  vec3 x1=x0-i1+C.xxx;vec3 x2=x0-i2+C.yyy;vec3 x3=x0-D.yyy;',
+    '  i=mod289(i);',
+    '  vec4 p=permute(permute(permute(i.z+vec4(0.0,i1.z,i2.z,1.0))+i.y+vec4(0.0,i1.y,i2.y,1.0))+i.x+vec4(0.0,i1.x,i2.x,1.0));',
+    '  float n_=0.142857142857;vec3 ns=n_*D.wyz-D.xzx;',
+    '  vec4 j=p-49.0*floor(p*ns.z*ns.z);',
+    '  vec4 x_=floor(j*ns.z);vec4 y_=floor(j-7.0*x_);',
+    '  vec4 x=x_*ns.x+ns.yyyy;vec4 y=y_*ns.x+ns.yyyy;',
+    '  vec4 h=1.0-abs(x)-abs(y);vec4 b0=vec4(x.xy,y.xy);vec4 b1=vec4(x.zw,y.zw);',
+    '  vec4 s0=floor(b0)*2.0+1.0;vec4 s1=floor(b1)*2.0+1.0;',
+    '  vec4 sh=-step(h,vec4(0.0));',
+    '  vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy;vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;',
+    '  vec3 p0=vec3(a0.xy,h.x);vec3 p1=vec3(a0.zw,h.y);vec3 p2=vec3(a1.xy,h.z);vec3 p3=vec3(a1.zw,h.w);',
+    '  vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));',
+    '  p0*=norm.x;p1*=norm.y;p2*=norm.z;p3*=norm.w;',
+    '  vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0);',
+    '  m=m*m;return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));',
+    '}',
+    '',
+    '// Curl noise: compute curl of 3D noise field for divergence-free flow',
+    '// This creates swirling, organic motion that stays on surfaces',
+    'vec3 curlNoise(vec3 p, float t){',
+    '  float e = 0.1;',
+    '  float n1,n2;',
+    '  vec3 curl;',
+    '  // dFz/dy - dFy/dz',
+    '  n1 = snoise3(vec3(p.x, p.y+e, p.z) + t);',
+    '  n2 = snoise3(vec3(p.x, p.y-e, p.z) + t);',
+    '  float dFz_dy = (n1-n2)/(2.0*e);',
+    '  n1 = snoise3(vec3(p.x, p.y, p.z+e) + t*1.1);',
+    '  n2 = snoise3(vec3(p.x, p.y, p.z-e) + t*1.1);',
+    '  float dFy_dz = (n1-n2)/(2.0*e);',
+    '  curl.x = dFz_dy - dFy_dz;',
+    '  // dFx/dz - dFz/dx',
+    '  n1 = snoise3(vec3(p.x, p.y, p.z+e) + t*0.9);',
+    '  n2 = snoise3(vec3(p.x, p.y, p.z-e) + t*0.9);',
+    '  float dFx_dz = (n1-n2)/(2.0*e);',
+    '  n1 = snoise3(vec3(p.x+e, p.y, p.z) + t*1.2);',
+    '  n2 = snoise3(vec3(p.x-e, p.y, p.z) + t*1.2);',
+    '  float dFz_dx = (n1-n2)/(2.0*e);',
+    '  curl.y = dFx_dz - dFz_dx;',
+    '  // dFy/dx - dFx/dy',
+    '  n1 = snoise3(vec3(p.x+e, p.y, p.z) + t*0.8);',
+    '  n2 = snoise3(vec3(p.x-e, p.y, p.z) + t*0.8);',
+    '  float dFy_dx = (n1-n2)/(2.0*e);',
+    '  n1 = snoise3(vec3(p.x, p.y+e, p.z) + t*1.15);',
+    '  n2 = snoise3(vec3(p.x, p.y-e, p.z) + t*1.15);',
+    '  float dFx_dy = (n1-n2)/(2.0*e);',
+    '  curl.z = dFy_dx - dFx_dy;',
+    '  return curl;',
+    '}',
+    '',
+    'void main(){',
+    '  vec4 cur = texture2D(uPositions, vUv);',
+    '  vec4 init = texture2D(uInitPositions, vUv);',
+    '  vec4 silTarget = texture2D(uSilTargets, vUv);',
+    '  float seed = init.w;',
+    '  vec3 pos = cur.xyz;',
+    '',
+    '  float mp = uMorph * uMorph * (3.0 - 2.0 * uMorph);',
+    '',
+    '  // ════════════════════════════════════════',
+    '  // ── CORE: Organic sphere with curl flow ──',
+    '  // ════════════════════════════════════════',
+    '',
+    '  // Surface noise (multi-octave for rich texture)',
+    '  vec3 nDir = normalize(init.xyz);',
+    '  float surfN1 = snoise3(nDir*1.8 + vec3(uTime*' + CONFIG.sphereNoiseSpeed.toFixed(3) + '));',
+    '  float surfN2 = snoise3(nDir*3.5 + vec3(-uTime*' + (CONFIG.sphereNoiseSpeed*0.6).toFixed(3) + ', uTime*' + (CONFIG.sphereNoiseSpeed*0.8).toFixed(3) + ', seed*0.04)) * 0.3;',
+    '  float surfN3 = snoise3(nDir*6.0 + vec3(uTime*' + (CONFIG.sphereNoiseSpeed*0.3).toFixed(3) + ', seed*20.0, -uTime*0.1)) * 0.15;',
+    '  float displacement = (surfN1 + surfN2 + surfN3) * ' + CONFIG.sphereNoiseAmt.toFixed(3) + ';',
+    '',
+    '  // Breathing: gentle sphere expand/contract',
+    '  float breathe = sin(uTime*' + CONFIG.breatheSpeed.toFixed(2) + ') * ' + CONFIG.breatheAmt.toFixed(3) + ';',
+    '',
+    '  // Target sphere position with noise + breathing + rotation',
+    '  float targetR = length(init.xyz) * (1.0 + displacement + breathe);',
+    '  vec3 homePos = nDir * targetR;',
+    '',
+    '  // Apply Y-axis rotation',
+    '  float cR = cos(uRotAngle); float sR = sin(uRotAngle);',
+    '  homePos = vec3(homePos.x*cR - homePos.z*sR, homePos.y, homePos.x*sR + homePos.z*cR);',
+    '',
+    '  // ── CURL NOISE: organic swirling flow on sphere surface ──',
+    '  // This is the key to the 구체5/6 look — particles flow tangentially',
+    '  vec3 curlP = pos * ' + CONFIG.curlScale.toFixed(4) + ';',
+    '  vec3 curl = curlNoise(curlP, uTime * ' + CONFIG.curlSpeed.toFixed(3) + ' + seed * 5.0);',
+    '',
+    '  // Project curl onto sphere surface (remove radial component)',
+    '  vec3 posNorm = normalize(pos + 0.001);',
+    '  vec3 tangentCurl = curl - posNorm * dot(curl, posNorm);',
+    '  vec3 curlForce = tangentCurl * ' + CONFIG.curlStrength.toFixed(2) + ' * (1.0 - mp);',
+    '',
+    '  // ── SPHERE BOUND: pull back to sphere surface ──',
+    '  vec3 homeForce = (homePos - pos) * ' + CONFIG.sphereBoundForce.toFixed(3) + ' * (1.0 - mp);',
+    '',
+    '  // ════════════════════════════════════════',
+    '  // ── UNMASK: Silhouette target ──',
+    '  // ════════════════════════════════════════',
+    '  vec3 silPos = silTarget.xyz;',
+    '  float silNoise = snoise3(silPos*0.004 + vec3(uTime*' + CONFIG.silDriftSpeed.toFixed(3) + ', uTime*0.03, seed*10.0));',
+    '  silPos.x += silNoise * 0.5 * mp;',
+    '  silPos.y += silNoise * 0.35 * mp;',
+    '  vec3 silForce = (silPos - pos) * 0.06 * mp;',
+    '',
+    '  // ── COMBINE ALL FORCES ──',
+    '  pos += curlForce + homeForce + silForce;',
+    '',
+    '  gl_FragColor = vec4(pos, cur.w);',
+    '}'
+  ].join('\n');
+
+  var simMat = new THREE.ShaderMaterial({
+    vertexShader: simVert, fragmentShader: simFrag,
+    uniforms: {
+      uPositions: {value: null},
+      uInitPositions: {value: initTex},
+      uSilTargets: {value: silTex},
+      uTime: {value: 0},
+      uMorph: {value: 0},
+      uRotAngle: {value: 0}
+    }
+  });
+  var simScene = new THREE.Scene();
+  var simCamera = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+  var simQuad = new THREE.Mesh(new THREE.PlaneGeometry(2,2), simMat);
+  simScene.add(simQuad);
+
+  // Initialize FBO with sphere positions
+  var initMat = new THREE.ShaderMaterial({
+    vertexShader: simVert,
+    fragmentShader: 'precision highp float;varying vec2 vUv;uniform sampler2D uTex;void main(){gl_FragColor=texture2D(uTex,vUv);}',
+    uniforms: {uTex: {value: initTex}}
+  });
+  var initQuad = new THREE.Mesh(new THREE.PlaneGeometry(2,2), initMat);
+  var initScene = new THREE.Scene(); initScene.add(initQuad);
+  renderer.setRenderTarget(rtA); renderer.render(initScene, simCamera);
+  renderer.setRenderTarget(rtB); renderer.render(initScene, simCamera);
+  renderer.setRenderTarget(null);
+
+  /* ═══ Particle Render Shader ═══ */
+  var renderVert = [
+    'attribute vec2 aRef;',
+    'uniform sampler2D uPositions;',
+    'uniform sampler2D uSilTargets;',
+    'uniform float uPixelRatio;',
+    'uniform float uMorph;',
+    'varying float vAlpha;',
+    'varying float vMorph;',
+    'varying float vDensity;',
+    '',
+    'void main(){',
+    '  vec4 posData = texture2D(uPositions, aRef);',
+    '  vec4 silData = texture2D(uSilTargets, aRef);',
+    '  vec3 pos = posData.xyz;',
+    '  vec4 mvPos = modelViewMatrix * vec4(pos, 1.0);',
+    '  gl_Position = projectionMatrix * mvPos;',
+    '',
+    '  float mp = uMorph * uMorph * (3.0 - 2.0 * uMorph);',
+    '  float density = silData.w;',
+    '',
+    '  // Core: tight dense particles. Unmask: softer larger particles',
+    '  float coreSize = ' + CONFIG.coreParticleBase.toFixed(1) + ';',
+    '  float unmaskSize = ' + CONFIG.unmaskParticleBase.toFixed(1) + ' + (1.0-density) * 2.0;',
+    '  float sz = mix(coreSize, unmaskSize, mp);',
+    '  gl_PointSize = sz * uPixelRatio * (300.0 / -mvPos.z);',
+    '  gl_PointSize = max(gl_PointSize, 0.5);',
+    '',
+    '  // Alpha',
+    '  float coreAlpha = mix(' + CONFIG.coreAlphaMin.toFixed(2) + ', ' + CONFIG.coreAlphaMax.toFixed(2) + ', posData.w);',
+    '  float unmaskAlpha = density * ' + CONFIG.unmaskAlpha.toFixed(2) + ';',
+    '  vAlpha = mix(coreAlpha, unmaskAlpha, mp);',
+    '  vMorph = mp;',
+    '  vDensity = density;',
+    '}'
+  ].join('\n');
+
+  var renderFrag = [
+    'varying float vAlpha;',
+    'varying float vMorph;',
+    'varying float vDensity;',
+    '',
+    'void main(){',
+    '  vec2 uv = gl_PointCoord - 0.5;',
+    '  float d = length(uv);',
+    '  if(d > 0.5) discard;',
+    '',
+    '  // Core: sharp center + glow. Unmask: soft gaussian blob',
+    '  float core = 1.0 - smoothstep(0.0, 0.15, d);',
+    '  float glow = 1.0 - smoothstep(0.0, 0.5, d);',
+    '  glow *= glow;',
+    '  float coreShape = core * 0.6 + glow * 0.5;',
+    '',
+    '  // Unmask: very soft gaussian for frosted glass',
+    '  float softness = mix(3.0, 1.2, vMorph);',
+    '  float unmaskShape = exp(-d * d * softness * 8.0);',
+    '',
+    '  float shape = mix(coreShape, unmaskShape, vMorph);',
+    '  float alpha = shape * vAlpha;',
+    '  alpha = max(alpha, 0.02 * vAlpha);',
+    '  if(alpha < 0.003) discard;',
+    '',
+    '  // Dark particles on light background',
+    '  gl_FragColor = vec4(0.0, 0.0, 0.0, alpha);',
+    '}'
+  ].join('\n');
+
+  var pGeo = new THREE.BufferGeometry();
+  var refs = new Float32Array(N*2);
+  var dummyPos = new Float32Array(N*3);
+  for(var i=0;i<N;i++){
+    refs[i*2] = (i%SIZE)/SIZE;
+    refs[i*2+1] = Math.floor(i/SIZE)/SIZE;
+  }
+  pGeo.setAttribute('position', new THREE.BufferAttribute(dummyPos, 3));
+  pGeo.setAttribute('aRef', new THREE.BufferAttribute(refs, 2));
+
+  var renderUniforms = {
+    uPositions: {value: rtA.texture},
+    uSilTargets: {value: silTex},
+    uPixelRatio: {value: pr},
+    uMorph: {value: 0}
+  };
+  var renderMat = new THREE.ShaderMaterial({
+    vertexShader: renderVert, fragmentShader: renderFrag,
+    uniforms: renderUniforms,
+    transparent: true, depthWrite: false, blending: THREE.NormalBlending
+  });
+  var pts = new THREE.Points(pGeo, renderMat);
+  scene.add(pts);
+
+  /* ═══ Icosahedron wireframe (Core only) ═══ */
+  var icoGroup = new THREE.Group(); scene.add(icoGroup);
+  var icoMat1 = new THREE.MeshBasicMaterial({color:0x000000, wireframe:true, transparent:true, opacity:0.12});
+  var icoMat2 = new THREE.MeshBasicMaterial({color:0x555555, wireframe:true, transparent:true, opacity:0.04});
+  icoGroup.add(new THREE.Mesh(new THREE.IcosahedronGeometry(4, 5), icoMat1));
+  icoGroup.add(new THREE.Mesh(new THREE.IcosahedronGeometry(5.5, 2), icoMat2));
+
+  /* ═══ BLUR PIPELINE ═══ */
+  var ppPR = renderer.getPixelRatio();
+  var rtW = Math.floor(W*ppPR), rtH = Math.floor(H*ppPR);
+  var ppOpts = {minFilter:THREE.LinearFilter, magFilter:THREE.LinearFilter, format:THREE.RGBAFormat};
+  var rtSharp = new THREE.WebGLRenderTarget(rtW, rtH, ppOpts);
+  var rtBlurA = new THREE.WebGLRenderTarget(rtW, rtH, ppOpts);
+  var rtBlurB = new THREE.WebGLRenderTarget(rtW, rtH, ppOpts);
+
+  var ppVS = 'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}';
+
+  // 13-tap Gaussian blur
+  var blurFS = [
+    'uniform sampler2D tDiffuse;',
+    'uniform vec2 uDir;',
+    'uniform vec2 uRes;',
+    'uniform float uSpread;',
+    'varying vec2 vUv;',
+    'void main(){',
+    '  vec2 tx = 1.0 / uRes;',
+    '  vec4 s = vec4(0.0);',
+    '  // 13-tap weights (sigma ~ 3.5)',
+    '  float w0=0.1964; float w1=0.2969; float w2=0.0945;',
+    '  float w3=0.0104; float w4=0.0029; float w5=0.00067; float w6=0.00013;',
+    '  s += texture2D(tDiffuse, vUv) * w0;',
+    '  for(int i=1; i<7; i++){',
+    '    float w = (i==1)?w1:(i==2)?w2:(i==3)?w3:(i==4)?w4:(i==5)?w5:w6;',
+    '    vec2 off = uDir * tx * float(i) * uSpread;',
+    '    s += texture2D(tDiffuse, vUv+off) * w;',
+    '    s += texture2D(tDiffuse, vUv-off) * w;',
+    '  }',
+    '  gl_FragColor = s;',
+    '}'
+  ].join('\n');
+
+  var blurHMat = new THREE.ShaderMaterial({uniforms:{
+    tDiffuse:{value:null}, uDir:{value:new THREE.Vector2(1,0)},
+    uRes:{value:new THREE.Vector2(rtW,rtH)}, uSpread:{value:CONFIG.blurSpread}
+  }, vertexShader:ppVS, fragmentShader:blurFS});
+
+  var blurVMat = new THREE.ShaderMaterial({uniforms:{
+    tDiffuse:{value:null}, uDir:{value:new THREE.Vector2(0,1)},
+    uRes:{value:new THREE.Vector2(rtW,rtH)}, uSpread:{value:CONFIG.blurSpread}
+  }, vertexShader:ppVS, fragmentShader:blurFS});
+
+  // Composite: sharp ↔ blurred + S-curve contrast + film grain
+  var compFS = [
+    'uniform sampler2D tSharp;',
+    'uniform sampler2D tBlur;',
+    'uniform float uBlend;',
+    'uniform float uTime;',
+    'uniform vec2 uRes;',
+    'varying vec2 vUv;',
+    '',
+    '// Simple hash for grain',
+    'float hash(vec2 p){',
+    '  return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453);',
+    '}',
+    '',
+    'void main(){',
+    '  float m = uBlend * uBlend * (3.0 - 2.0 * uBlend);',
+    '  vec4 sharp = texture2D(tSharp, vUv);',
+    '  vec4 blur = texture2D(tBlur, vUv);',
+    '  vec4 col = mix(sharp, blur, m);',
+    '',
+    '  // S-curve contrast enhancement (stronger in unmask mode)',
+    '  float contrast = mix(0.0, 0.6, m);',
+    '  col.rgb = col.rgb - 0.5;',
+    '  col.rgb = col.rgb * (1.0 + contrast) / (1.0 + contrast * abs(col.rgb * 2.0));',
+    '  col.rgb = col.rgb + 0.5;',
+    '',
+    '  // Film grain (subtle, photographic feel)',
+    '  float grainAmt = mix(0.0, 0.025, m);',
+    '  float grain = hash(vUv * uRes + uTime * 100.0) * 2.0 - 1.0;',
+    '  col.rgb += grain * grainAmt;',
+    '',
+    '  gl_FragColor = col;',
+    '}'
+  ].join('\n');
+
+  var compMat = new THREE.ShaderMaterial({uniforms:{
+    tSharp:{value:null}, tBlur:{value:null},
+    uBlend:{value:0}, uTime:{value:0},
+    uRes:{value:new THREE.Vector2(rtW,rtH)}
+  }, vertexShader:ppVS, fragmentShader:compFS});
+
+  var ppGeo = new THREE.PlaneGeometry(2,2);
+  var ppQuadH = new THREE.Mesh(ppGeo, blurHMat);
+  var ppQuadV = new THREE.Mesh(ppGeo, blurVMat);
+  var ppQuadC = new THREE.Mesh(ppGeo, compMat);
+  var ppScene = new THREE.Scene();
+  var ppCam = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+
+  /* ═══ Interaction ═══ */
+  var mx = 0, my = 0;
+  document.addEventListener('mousemove', function(e){
+    mx = (e.clientX - W/2) * 0.04;
+    my = (e.clientY - H/2) * 0.04;
+  });
+
+  var mode = 'core', morphTarget = 0, morphVal = 0;
+  window.SM = function(m){
+    mode = m;
+    morphTarget = m === 'unmask' ? 1 : 0;
+    document.getElementById('bC').classList.toggle('active', m==='core');
+    document.getElementById('bU').classList.toggle('active', m==='unmask');
+  };
+  renderer.domElement.addEventListener('click', function(){
+    SM(mode==='core' ? 'unmask' : 'core');
+  });
+  renderer.domElement.style.cursor = 'pointer';
+
+  /* ═══ Render Loop ═══ */
+  var time = 0, flip = false, rotAngle = 0;
+
+  function animate(){
+    requestAnimationFrame(animate);
+    time += 0.0008;
+    rotAngle += CONFIG.sphereRotSpeed * 0.001;
+
+    // Smooth morph
+    morphVal += (morphTarget - morphVal) * CONFIG.morphSpeed;
+    var mp = morphVal * morphVal * (3 - 2*morphVal);
+
+    // FBO simulation
+    simMat.uniforms.uPositions.value = flip ? rtB.texture : rtA.texture;
+    simMat.uniforms.uTime.value = time;
+    simMat.uniforms.uMorph.value = morphVal;
+    simMat.uniforms.uRotAngle.value = rotAngle;
+    renderer.setRenderTarget(flip ? rtA : rtB);
+    renderer.render(simScene, simCamera);
+    renderer.setRenderTarget(null);
+
+    // Update render uniforms
+    renderUniforms.uPositions.value = flip ? rtA.texture : rtB.texture;
+    renderUniforms.uMorph.value = morphVal;
+    flip = !flip;
+
+    // Icosahedron fade
+    var icoFade = Math.max(0, 1 - morphVal*5);
+    icoMat1.opacity = 0.12 * icoFade;
+    icoMat2.opacity = 0.04 * icoFade;
+
+    // Camera subtle motion
+    pts.rotation.y += 0.00008 + mx * 0.00004;
+    pts.rotation.x += my * 0.00003;
+    icoGroup.rotation.y -= 0.0004;
+    icoGroup.rotation.x += 0.00015;
+
+    if(mp < 0.02){
+      // Core mode: direct render (no blur)
+      renderer.setRenderTarget(null);
+      renderer.setClearColor(bgC, 1);
+      renderer.render(scene, camera);
+    } else {
+      // Render particles → sharp RT
+      renderer.setRenderTarget(rtSharp);
+      renderer.setClearColor(bgC, 1);
+      renderer.clear();
+      renderer.render(scene, camera);
+
+      // Multi-pass blur
+      var passes = Math.max(1, Math.round(mp * CONFIG.blurPasses));
+      var spread = 0.5 + mp * (CONFIG.blurSpread - 0.5);
+      blurHMat.uniforms.uSpread.value = spread;
+      blurVMat.uniforms.uSpread.value = spread;
+      var inputTex = rtSharp.texture;
+
+      for(var p = 0; p < passes; p++){
+        // Horizontal
+        blurHMat.uniforms.tDiffuse.value = inputTex;
+        ppScene.children.length = 0;
+        ppScene.add(ppQuadH);
+        renderer.setRenderTarget(rtBlurB);
+        renderer.render(ppScene, ppCam);
+
+        // Vertical
+        blurVMat.uniforms.tDiffuse.value = rtBlurB.texture;
+        ppScene.children.length = 0;
+        ppScene.add(ppQuadV);
+        renderer.setRenderTarget(rtBlurA);
+        renderer.render(ppScene, ppCam);
+
+        inputTex = rtBlurA.texture;
+      }
+
+      // Composite
+      compMat.uniforms.tSharp.value = rtSharp.texture;
+      compMat.uniforms.tBlur.value = rtBlurA.texture;
+      compMat.uniforms.uBlend.value = morphVal;
+      compMat.uniforms.uTime.value = time;
+      ppScene.children.length = 0;
+      ppScene.add(ppQuadC);
+      renderer.setRenderTarget(null);
+      renderer.render(ppScene, ppCam);
+    }
+  }
+
+  animate();
+
+  // Resize
+  window.addEventListener('resize', function(){
+    W = innerWidth; H = innerHeight;
+    camera.aspect = W/H;
+    camera.updateProjectionMatrix();
+    renderer.setSize(W, H);
+    ppPR = renderer.getPixelRatio();
+    rtW = Math.floor(W*ppPR); rtH = Math.floor(H*ppPR);
+    rtSharp.setSize(rtW, rtH);
+    rtBlurA.setSize(rtW, rtH);
+    rtBlurB.setSize(rtW, rtH);
+    blurHMat.uniforms.uRes.value.set(rtW, rtH);
+    blurVMat.uniforms.uRes.value.set(rtW, rtH);
+    compMat.uniforms.uRes.value.set(rtW, rtH);
+    renderUniforms.uPixelRatio.value = ppPR;
+  });
+
+}); // end loadSilhouette callback
+
+})();
+</script>
+</body>
+</html>

@@ -285,7 +285,8 @@ void main(){
       function sampleFromImageData(
         px: Uint8ClampedArray, W: number, H: number,
         offX: number, offY: number, offZ: number,
-        h3d: number, budget: number, sizeRatio: number, offset: number
+        h3d: number, budget: number, sizeRatio: number, offset: number,
+        vigPow = 3
       ): number {
         let sumW = 0, sumX = 0, sumY = 0;
         for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -313,7 +314,7 @@ void main(){
           const darkness = 1 - (px[idx] + px[idx + 1] + px[idx + 2]) / (3 * 255);
           const dx = (ix - cenX) / vigR, dy = (iy - cenY) / vigR;
           let vignette = Math.max(0, 1 - Math.sqrt(dx * dx + dy * dy));
-          vignette = vignette ** 3;
+          vignette = vignette ** vigPow;
           const prob = darkness * darkness * vignette * 4.5;
           if (darkness > 0.03 && Math.random() < prob) {
             let x3d = (ix - cenX) * s3d + offX, y3d = -(iy - cenY) * s3d + offY;
@@ -384,7 +385,7 @@ void main(){
       }
 
       // === Load hand image + supporting figures ===
-      const HAND_IMG_SRC = '/images/hand-front.PNG.png';
+      const HAND_IMG_SRC = '/images/hand.png';
       const srcSet = new Set(FIGURES.map((f) => f.src));
       const allSrcs = [HAND_IMG_SRC, ...Array.from(srcSet)];
       const loadedImgs: Record<string, HTMLImageElement> = {};
@@ -427,7 +428,8 @@ void main(){
             280,
             HAND_BUDGET,
             1.0,
-            0
+            0,
+            1  // vigPow=1: minimal vignette to preserve hand shape
           );
         }
 

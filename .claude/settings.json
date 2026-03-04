@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git pull:*)",
+      "WebFetch(domain:antigravity.google)",
+      "Bash(start:*)",
+      "Read(//c/Users/user/Downloads/**)",
+      "Read(//c/Users/user/Downloads/FILES//**)",
+      "Bash(git add:*)",
+      "Bash(where:*)",
+      "Bash(vercel ls:*)",
+      "Bash(npx vercel:*)",
+      "Bash(gh api:*)",
+      "Bash(git fetch:*)",
+      "WebFetch(domain:aaaaaaleeeetheeeeeia.vercel.app)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(xxd:*)",
+      "Bash(node -e:*)",
+      "Bash(ls:*)",
+      "Bash(awk:*)",
+      "Bash(PYTHONIOENCODING=utf-8 python3:*)",
+      "Bash(python:*)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\user\\Downloads",
+      "C:\\Users\\user\\Downloads\\새 폴더 (4)"
+    ]
+  }
+}

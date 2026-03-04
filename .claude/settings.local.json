@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /c/Users/user/Desktop/TEST log --oneline)",
+      "Bash(npm install)",
+      "Bash(npm view @stripe/stripe-js version)",
+      "Bash(npx next build)",
+      "WebFetch(domain:localhost)"
+    ]
+  }
+}

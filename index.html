@@ -1150,7 +1150,7 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
 <div class="page active" id="page-about">
   <div class="hero-top">
     <div class="hero-landing">
-      <div class="hl-logo" id="hlLogo">Aletheia</div>
+      <div class="hl-logo" id="hlLogo" style="cursor:pointer">Aletheia</div>
       <div class="hl-bottom">
         <div class="hl-typing" id="hlTyping"></div>
         <div class="hl-subtitle" id="hlSubtitle">
@@ -1953,6 +1953,7 @@ function closeProfileDropdown(){document.getElementById('profileDropdown').class
 /* EVENTS */
 document.querySelectorAll('.nav-center li').forEach(function(li){li.addEventListener('click',function(){switchPage(li.getAttribute('data-page'))})});
 document.getElementById('logoBtn').addEventListener('click',function(){switchPage('about');var ap=document.getElementById('page-about');if(ap)ap.scrollTop=0;window.scrollTo(0,0);if(window._lenis)window._lenis.scrollTo(0,{immediate:true});});
+document.getElementById('hlLogo').addEventListener('click',function(){switchPage('about');var ap=document.getElementById('page-about');if(ap)ap.scrollTop=0;window.scrollTo(0,0);if(window._lenis)window._lenis.scrollTo(0,{immediate:true});});
 document.getElementById('btnSignIn').addEventListener('click',function(){openModal('loginOverlay')});
 document.getElementById('btnGoogle').addEventListener('click',mockSignIn);
 document.getElementById('btnSignOut').addEventListener('click',mockSignOut);
@@ -3447,7 +3448,7 @@ var simFrag=[
 '    float swayZ=sin(uTime*0.09+figPhase*1.1)*1.5;',
 '    float swayAmt=0.3+looseness*0.7;',
 '    silPos.x+=swayX*swayAmt*mp;silPos.y+=swayY*swayAmt*mp;silPos.z+=swayZ*swayAmt*mp;',
-'    float isTP=step(1.4,silDensity);float tBob=sin(uTime*10.0+silPos.x*0.02)*6.0+sin(uTime*6.5+silPos.x*0.035)*3.5;silPos.y+=tBob*isTP*mp;',
+'    float isTP=step(1.4,silDensity);float tBob=sin(uTime*8.0+seed*6.28)*0.8+sin(uTime*5.0+seed*3.14)*0.5;silPos.y+=tBob*isTP*mp;',
 '    float attractStr=0.06+min(silDensity,1.0)*0.40;silForce=(silPos-pos)*attractStr*mp;',
 '  }else if(isOrbit>0.5){',
 '    float orbitDist=abs(silDensity);float spd1=0.025+seed*0.035;float spd2=0.02+orbitDist*0.05;',
@@ -3459,7 +3460,7 @@ var simFrag=[
 '    float oAngle=uTime*(0.03+seed*0.05)+seed*6.28;float oR=3.0+seed*8.0;',
 '    vec3 drift=silPos+vec3(cos(oAngle)*oR,sin(oAngle*0.6+seed)*oR*0.25,sin(oAngle*0.8)*oR);silForce=(drift-pos)*0.02*mp;',
 '  }',
-'  if(uMouseActive>0.5){vec3 toP=pos-uMouse3D;float mDist=length(toP);float mRad=mix(50.0,120.0,mp);if(mDist<mRad&&mDist>0.1){float push=1.0-mDist/mRad;push=push*push*push;pos+=normalize(toP)*push*12.0;}}',
+'  if(uMouseActive>0.5){vec3 toP=pos-uMouse3D;float mDist=length(toP);float mRad=mix(25.0,55.0,mp);if(mDist<mRad&&mDist>0.1){float push=1.0-mDist/mRad;push=push*push*push;pos+=normalize(toP)*push*8.0;}}',
 '  pos+=curlForce+homeForce+silForce;gl_FragColor=vec4(pos,cur.w);',
 '}'
 ].join('\n');
@@ -3589,7 +3590,8 @@ var _mouseNDC=new THREE.Vector2();var _mouseActive=false,_mouseTimer=null;
 document.addEventListener('mousemove',function(e){
   mx=(e.clientX-innerWidth/2)*0.05;my=(e.clientY-innerHeight/2)*0.05;
   _mouseNDC.x=(e.clientX/innerWidth)*2-1;_mouseNDC.y=-(e.clientY/innerHeight)*2+1;
-  _mouseActive=true;clearTimeout(_mouseTimer);_mouseTimer=setTimeout(function(){_mouseActive=false},200)});
+  _mouseActive=true;clearTimeout(_mouseTimer);_mouseTimer=setTimeout(function(){_mouseActive=false},60000)});
+document.addEventListener('mouseleave',function(){_mouseActive=false;clearTimeout(_mouseTimer)});
 var _raycaster=new THREE.Raycaster();
 
 (function animate(){

@@ -3449,9 +3449,9 @@ var simFrag=[
 '    silPos.x+=swayX*swayAmt*mp;silPos.y+=swayY*swayAmt*mp;silPos.z+=swayZ*swayAmt*mp;',
 '    float attractStr=0.06+silDensity*0.40;silForce=(silPos-pos)*attractStr*mp;',
 '  }else if(isOrbit>0.5){',
-'    float orbitDist=abs(silDensity);float spd1=0.06+seed*0.08;float spd2=0.04+orbitDist*0.12;',
+'    float orbitDist=abs(silDensity);float spd1=0.025+seed*0.035;float spd2=0.02+orbitDist*0.05;',
 '    float a1=uTime*spd1+seed*6.2831;float a2=uTime*spd2+seed*3.14+orbitDist*10.0;',
-'    float oR=8.0+orbitDist*30.0;',
+'    float oR=14.0+orbitDist*40.0;',
 '    vec3 orbitOffset=vec3(cos(a1)*oR+sin(a2*0.3)*oR*0.4,sin(a1*0.6+seed*2.0)*oR*0.45+cos(a2*0.5)*oR*0.2,sin(a2*0.7+seed)*oR*0.5+cos(a1*0.4)*oR*0.15);',
 '    vec3 orbitTarget=silPos+orbitOffset*mp;silForce=(orbitTarget-pos)*0.018*mp;silForce+=tangentCurl*3.0*mp;',
 '  }else{',
@@ -3527,7 +3527,7 @@ function sampleFigure(px,W,H,fig,offset){
   if(sumW<1)return 0;var cenX=sumX/sumW,cenY=sumY/sumW;
   var maxR=0;for(var y=0;y<H;y++)for(var x=0;x<W;x++){var idx=(y*W+x)*4;var dk=1-(px[idx]+px[idx+1]+px[idx+2])/(3*255);if(dk>0.10){var d=Math.sqrt((x-cenX)*(x-cenX)+(y-cenY)*(y-cenY));if(d>maxR)maxR=d}}
   var vigR=maxR*1.7,s3d=fig.h3d/H,worldSpan=320,offX=fig.cx*worldSpan,offY=fig.cy*worldSpan*0.6,offZ=(Math.random()-0.5)*15,sizeRatio=fig.h3d/155;
-  var bodyTarget=Math.floor(fig.budget*0.60),placed=0,attempts=0,maxAtt=fig.budget*600;
+  var bodyTarget=Math.floor(fig.budget*0.78),placed=0,attempts=0,maxAtt=fig.budget*600;
   while(placed<bodyTarget&&attempts<maxAtt){var ix=Math.floor(Math.random()*W),iy=Math.floor(Math.random()*H);var idx=(iy*W+ix)*4;var darkness=1-(px[idx]+px[idx+1]+px[idx+2])/(3*255);var dx=(ix-cenX)/vigR,dy=(iy-cenY)/vigR,radial=Math.sqrt(dx*dx+dy*dy);var vignette=Math.max(0,1-radial);vignette=vignette*vignette*vignette;var prob=darkness*darkness*vignette*4.5;if(darkness>0.03&&Math.random()<prob){var x3d=(ix-cenX)*s3d+offX,y3d=-(iy-cenY)*s3d+offY;var edgeness=(1-darkness)*(1+radial*2),sMul=fig.scatterMul||1.0,scatter=edgeness*edgeness*5.0*sizeRatio*sMul;x3d+=(Math.random()-0.5)*scatter;y3d+=(Math.random()-0.5)*scatter;var zRange=(6*Math.sqrt(darkness)+scatter*0.3)*sizeRatio,z3d=(Math.random()*2-1)*zRange+offZ;var pi=offset+placed;silTargetData[pi*4]=x3d;silTargetData[pi*4+1]=y3d;silTargetData[pi*4+2]=z3d;silTargetData[pi*4+3]=Math.pow(darkness,0.4)*vignette;placed++}attempts++}
   var dissTarget=Math.floor(fig.budget*0.10),dissPlaced=0;attempts=0;
   while(dissPlaced<dissTarget&&attempts<maxAtt){var ix=Math.floor(Math.random()*W),iy=Math.floor(Math.random()*H);var idx=(iy*W+ix)*4;var darkness=1-(px[idx]+px[idx+1]+px[idx+2])/(3*255);if(darkness>0.02&&darkness<0.40){var pushR=(6+Math.random()*45)*sizeRatio,pushA=Math.random()*Math.PI*2;var x3d=(ix-cenX)*s3d+offX+Math.cos(pushA)*pushR,y3d=-(iy-cenY)*s3d+offY+Math.sin(pushA)*pushR*0.7,z3d=(Math.random()-0.5)*pushR*1.2+offZ;var pi=offset+placed+dissPlaced;silTargetData[pi*4]=x3d;silTargetData[pi*4+1]=y3d;silTargetData[pi*4+2]=z3d;silTargetData[pi*4+3]=darkness*0.15;dissPlaced++}attempts++}
@@ -3548,11 +3548,11 @@ function buildFromImage(){
       var px=imgData.data;for(var pi2=0;pi2<px.length;pi2+=4){var br=(px[pi2]+px[pi2+1]+px[pi2+2])/3;if(br>210){px[pi2]=px[pi2+1]=px[pi2+2]=255}else if(br<190){var cF=0.6;px[pi2]=Math.round(px[pi2]*cF);px[pi2+1]=Math.round(px[pi2+1]*cF);px[pi2+2]=Math.round(px[pi2+2]*cF)}}
       var count=sampleFigure(imgData.data,W,H,fig,placed);console.log('[Aletheia] Fig '+fi+': '+count+'/'+fig.budget);placed+=count}
     /* Unmask 텍스트를 점으로 구성 */
-    var _utC=document.createElement('canvas');_utC.width=1600;_utC.height=450;var _utX=_utC.getContext('2d');_utX.fillStyle='#fff';_utX.fillRect(0,0,1600,450);_utX.fillStyle='#000';_utX.textAlign='center';
-    _utX.font='600 56px "Helvetica Neue",Inter,Arial,sans-serif';_utX.fillText('A map that knows you',800,100);_utX.fillText('better than you.',800,170);
-    _utX.font='300 26px "Helvetica Neue",Inter,Arial,sans-serif';_utX.fillText('Data extracted from Core \u2014 values, patterns, avoidance.',800,300);_utX.fillText('All synthesized into a single profile.',800,340);
-    var _utD=_utX.getImageData(0,0,1600,450).data;var _utBudget=Math.floor(35000*_budgetMul),_utp=0,_uta=0,_utScale=0.14,_utOffY=0.18*320*0.6;
-    while(_utp<_utBudget&&_uta<_utBudget*400){var _ux=Math.floor(Math.random()*1600),_uy=Math.floor(Math.random()*450),_ui=(_uy*1600+_ux)*4;var _ud=1-(_utD[_ui]+_utD[_ui+1]+_utD[_ui+2])/(3*255);if(_ud>0.3&&Math.random()<_ud){var _px=(_ux-800)*_utScale,_py=-(_uy-225)*_utScale+_utOffY;silTargetData[(placed+_utp)*4]=_px;silTargetData[(placed+_utp)*4+1]=_py;silTargetData[(placed+_utp)*4+2]=(Math.random()-0.5)*2;silTargetData[(placed+_utp)*4+3]=0.75+_ud*0.25;_utp++}_uta++}
+    var _utC=document.createElement('canvas');_utC.width=1800;_utC.height=500;var _utX=_utC.getContext('2d');_utX.fillStyle='#fff';_utX.fillRect(0,0,1800,500);_utX.fillStyle='#000';_utX.textAlign='center';
+    _utX.font='600 74px "Helvetica Neue",Inter,Arial,sans-serif';_utX.fillText('A map that knows you',900,120);_utX.fillText('better than you.',900,210);
+    _utX.font='300 32px "Helvetica Neue",Inter,Arial,sans-serif';_utX.fillText('Data extracted from Core \u2014 values, patterns, avoidance.',900,340);_utX.fillText('All synthesized into a single profile.',900,385);
+    var _utD=_utX.getImageData(0,0,1800,500).data;var _utBudget=Math.floor(40000*_budgetMul),_utp=0,_uta=0,_utScale=0.16,_utOffY=0.12*320*0.6;
+    while(_utp<_utBudget&&_uta<_utBudget*400){var _ux=Math.floor(Math.random()*1800),_uy=Math.floor(Math.random()*500),_ui=(_uy*1800+_ux)*4;var _ud=1-(_utD[_ui]+_utD[_ui+1]+_utD[_ui+2])/(3*255);if(_ud>0.3&&Math.random()<_ud){var _px=(_ux-900)*_utScale,_py=-(_uy-250)*_utScale+_utOffY;silTargetData[(placed+_utp)*4]=_px;silTargetData[(placed+_utp)*4+1]=_py;silTargetData[(placed+_utp)*4+2]=(Math.random()-0.5)*2;silTargetData[(placed+_utp)*4+3]=0.80+_ud*0.20;_utp++}_uta++}
     console.log('[Aletheia] Text particles:',_utp);placed+=_utp;
     var dissEnd=placed+DISSOLVE_BUDGET;
     while(placed<dissEnd){var rfi=Math.floor(Math.random()*FIGURES.length);var rf=FIGURES[rfi];var worldSpan=320;var r=Math.random();var bx,by,bz;

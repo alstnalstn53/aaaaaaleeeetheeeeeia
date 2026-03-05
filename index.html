@@ -290,10 +290,6 @@ body:not(.dark-mode) .ed-btn{border-color:rgba(0,0,0,0.1);background:rgba(0,0,0,
   .svc-intro-title{font-size:24px!important}
   .svc-intro-desc{font-size:13px!important}
   .ir-grid{grid-template-columns:1fr}
-  .archive-map-canvas{height:auto;min-height:100vh;padding:0 20px;display:flex;flex-direction:column;align-items:center;gap:40px;padding-top:160px;padding-bottom:60px}
-  .archive-map-canvas .map-lines{display:none}
-  .map-node{position:relative!important;left:auto!important;top:auto!important;transform:none!important}
-  .map-label{position:relative;top:auto;left:auto;transform:none;margin-top:10px}
   .map-container{transform:scale(0.7)!important}
   .project-detail-inner{padding:70px 24px}
   .project-detail-close{top:20px;right:20px;width:36px;height:36px}
@@ -729,121 +725,6 @@ body.dark-mode .um-depth-fill{background:#fff;opacity:0.25}
 .ir-insight{padding:20px;background:rgba(0,0,0,0.03);border-radius:12px;border:1px solid rgba(0,0,0,0.04)}
 #page-interpret .svc-page{overflow-y:auto;padding-bottom:80px}
 
-/* ARCHIVE */
-#page-archive{padding-top:0;overflow-y:auto;overflow-x:hidden}
-.archive-map{position:relative;width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center}
-.archive-map-header{position:absolute;top:100px;left:50%;transform:translateX(-50%);text-align:center;z-index:5;pointer-events:none}
-.archive-map-title{font-size:clamp(28px,3vw,44px);font-weight:300;letter-spacing:-0.02em;margin-bottom:8px;color:var(--text)}
-.archive-map-sub{font-size:13px;color:#999;font-weight:300}
-.archive-map-canvas{position:relative;width:100%;max-width:1100px;height:75vh;margin:0 auto}
-.map-lines{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1}
-.map-lines line{stroke:rgba(0,0,0,0.06);stroke-width:0.5;transition:stroke 0.4s}
-body.dark-mode .map-lines line{stroke:rgba(255,255,255,0.06)}
-.map-node{position:absolute;z-index:3;cursor:pointer;transform:translate(-50%,-50%)}
-.map-dot{width:8px;height:8px;border-radius:50%;background:#000;transition:transform 0.3s,box-shadow 0.3s;position:relative}
-.map-dot::after{content:'';position:absolute;top:-6px;left:-6px;width:20px;height:20px;border-radius:50%;border:1px solid rgba(0,0,0,0.08);transition:0.3s}
-body.dark-mode .map-dot{background:#fff}
-body.dark-mode .map-dot::after{border-color:rgba(255,255,255,0.1)}
-.map-node:hover .map-dot{transform:scale(1.8);box-shadow:0 0 24px rgba(0,0,0,0.2)}
-body.dark-mode .map-node:hover .map-dot{box-shadow:0 0 24px rgba(255,255,255,0.3)}
-.map-node:active .map-dot{transform:scale(0.6)!important;transition:transform 0.08s}
-.map-node:hover .map-dot::after{transform:scale(1.6);border-color:rgba(0,0,0,0.15)}
-body.dark-mode .map-node:hover .map-dot::after{border-color:rgba(255,255,255,0.2)}
-.map-label{position:absolute;top:20px;left:50%;transform:translateX(-50%);white-space:nowrap;text-align:center;pointer-events:none}
-.map-label-cat{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#999;margin-bottom:2px;font-weight:500}
-.map-label-name{font-size:13px;font-weight:500;letter-spacing:0.02em;color:var(--text)}
-/* Breathing glow */
-.map-dot-glow{position:absolute;top:50%;left:50%;width:30px;height:30px;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(0,0,0,0.06) 0%,transparent 70%);animation:dotBreathe 4s ease-in-out infinite;pointer-events:none}
-body.dark-mode .map-dot-glow{background:radial-gradient(circle,rgba(255,255,255,0.08) 0%,transparent 70%)}
-@keyframes dotBreathe{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:0.6}50%{transform:translate(-50%,-50%) scale(2.2);opacity:0.15}}
-.map-node[data-node="0"] .map-dot-glow{animation-delay:0s}
-.map-node[data-node="1"] .map-dot-glow{animation-delay:-0.7s}
-.map-node[data-node="2"] .map-dot-glow{animation-delay:-1.4s}
-.map-node[data-node="3"] .map-dot-glow{animation-delay:-2.1s}
-.map-node[data-node="4"] .map-dot-glow{animation-delay:-2.8s}
-.map-node[data-node="5"] .map-dot-glow{animation-delay:-3.5s}
-/* Twinkle sparks */
-.map-spark{position:absolute;width:2px;height:2px;border-radius:50%;background:#000;opacity:0;pointer-events:none}
-body.dark-mode .map-spark{background:#fff}
-.map-spark.s1{top:-12px;left:4px;animation:sparkle 5s ease-in-out infinite 0s}
-.map-spark.s2{top:6px;left:-10px;animation:sparkle 5s ease-in-out infinite 1.7s}
-.map-spark.s3{top:10px;left:14px;animation:sparkle 5s ease-in-out infinite 3.3s}
-@keyframes sparkle{0%,85%,100%{opacity:0;transform:scale(0)}90%{opacity:0.8;transform:scale(1.2)}95%{opacity:0;transform:scale(0)}}
-/* Pulse animation on dots */
-.map-dot::before{content:'';position:absolute;top:50%;left:50%;width:8px;height:8px;border-radius:50%;background:rgba(0,0,0,0.08);transform:translate(-50%,-50%);animation:mapPulse 3s ease-in-out infinite}
-body.dark-mode .map-dot::before{background:rgba(255,255,255,0.08)}
-@keyframes mapPulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:0.6}50%{transform:translate(-50%,-50%) scale(3);opacity:0}}
-.map-node[data-node="0"] .map-dot::before{animation-delay:0s}
-.map-node[data-node="1"] .map-dot::before{animation-delay:0.5s}
-.map-node[data-node="2"] .map-dot::before{animation-delay:1s}
-.map-node[data-node="3"] .map-dot::before{animation-delay:1.5s}
-.map-node[data-node="4"] .map-dot::before{animation-delay:2s}
-.map-node[data-node="5"] .map-dot::before{animation-delay:2.5s}
-/* Node floating */
-.map-node{animation:nodeFloat 6s ease-in-out infinite}
-.map-node[data-node="1"]{animation-delay:-1s}
-.map-node[data-node="2"]{animation-delay:-2s}
-.map-node[data-node="3"]{animation-delay:-3.5s}
-.map-node[data-node="4"]{animation-delay:-4.2s}
-.map-node[data-node="5"]{animation-delay:-5s}
-@keyframes nodeFloat{0%,100%{margin-top:0}50%{margin-top:-6px}}
-/* Orbital micro-particles around each node */
-.map-orbit{position:absolute;top:50%;left:50%;width:40px;height:40px;transform:translate(-50%,-50%);pointer-events:none}
-.map-orbit-dot{position:absolute;width:2px;height:2px;border-radius:50%;background:rgba(0,0,0,0.2);animation:orbitSpin 8s linear infinite}
-body.dark-mode .map-orbit-dot{background:rgba(255,255,255,0.25)}
-.map-orbit-dot:nth-child(1){animation-duration:6s;top:0;left:50%}
-.map-orbit-dot:nth-child(2){animation-duration:8s;animation-delay:-2s;top:50%;left:100%}
-.map-orbit-dot:nth-child(3){animation-duration:10s;animation-delay:-4s;top:100%;left:50%}
-@keyframes orbitSpin{from{transform:rotate(0deg) translateX(18px) rotate(0deg)}to{transform:rotate(360deg) translateX(18px) rotate(-360deg)}}
-/* Line dash animation */
-.map-lines line{stroke-dasharray:4 8;animation:lineDash 20s linear infinite}
-@keyframes lineDash{from{stroke-dashoffset:0}to{stroke-dashoffset:-120}}
-
-body.pd-open .map-node,body.pd-open .map-orbit-dot,body.pd-open .map-dot::before,body.pd-open .map-dot-glow,body.pd-open .map-spark{animation-play-state:paused!important}
-.project-detail{position:fixed;top:0;left:0;width:100%;height:100%;z-index:10000;opacity:0;visibility:hidden;transition:opacity 0.6s cubic-bezier(0.4,0,0.2,1),visibility 0s 0.6s;will-change:opacity}
-.project-detail.show{opacity:1;visibility:visible;transition:opacity 0.6s cubic-bezier(0.4,0,0.2,1),visibility 0s 0s}
-.project-detail-bg{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.75);backdrop-filter:blur(50px);-webkit-backdrop-filter:blur(50px)}
-body.dark-mode .project-detail-bg{background:rgba(10,10,10,0.75)}
-.project-detail-inner{position:relative;z-index:2;max-width:900px;margin:0 auto;height:100%;overflow-y:auto;padding:80px 60px;scrollbar-width:none;-ms-overflow-style:none}
-.project-detail-inner::-webkit-scrollbar{display:none}
-.project-detail-close{position:fixed;top:30px;right:40px;width:40px;height:40px;border:1px solid rgba(0,0,0,0.1);border-radius:50%;background:rgba(255,255,255,0.6);backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:3;transition:0.3s}
-.project-detail-close:hover{background:rgba(0,0,0,0.05);border-color:rgba(0,0,0,0.2)}
-.project-detail-close svg{width:16px;height:16px;stroke:#333;fill:none;stroke-width:1.5}
-body.dark-mode .project-detail-close{border-color:rgba(255,255,255,0.1);background:rgba(30,30,30,0.6)}
-body.dark-mode .project-detail-close:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.2)}
-body.dark-mode .project-detail-close svg{stroke:#ccc}
-.pd-cat{font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#999;margin-bottom:12px;font-weight:500}
-.pd-name{font-size:clamp(36px,5vw,56px);font-weight:300;letter-spacing:-0.03em;margin-bottom:8px;color:var(--text);line-height:1.1}
-.pd-sub{font-size:16px;color:#888;font-style:italic;margin-bottom:40px;font-weight:300}
-.pd-gallery{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:40px}
-.pd-gallery-item{aspect-ratio:4/3;border-radius:10px;overflow:hidden;position:relative}
-.pd-gallery-item.wide{grid-column:span 2;aspect-ratio:21/9}
-.pd-gallery-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#aaa;letter-spacing:0.06em;text-transform:uppercase;border:1px solid rgba(0,0,0,0.04)}
-body.dark-mode .pd-gallery-placeholder{border-color:rgba(255,255,255,0.06);color:#555}
-/* Generative patterns for placeholders */
-.pd-gallery-placeholder{background-size:10px 10px}
-.pd-gallery-item img{width:100%;height:100%;object-fit:cover;display:block;border-radius:10px}
-.pd-pat-dots{background-image:radial-gradient(rgba(0,0,0,0.06) 1px,transparent 1px);background-size:8px 8px}
-.pd-pat-lines{background-image:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(0,0,0,0.03) 4px,rgba(0,0,0,0.03) 5px)}
-.pd-pat-grid{background-image:linear-gradient(rgba(0,0,0,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,0.03) 1px,transparent 1px);background-size:16px 16px}
-.pd-pat-cross{background-image:radial-gradient(rgba(0,0,0,0.04) 1.5px,transparent 1.5px),radial-gradient(rgba(0,0,0,0.04) 1.5px,transparent 1.5px);background-size:12px 12px;background-position:0 0,6px 6px}
-body.dark-mode .pd-pat-dots{background-image:radial-gradient(rgba(255,255,255,0.06) 1px,transparent 1px)}
-body.dark-mode .pd-pat-lines{background-image:repeating-linear-gradient(45deg,transparent,transparent 4px,rgba(255,255,255,0.04) 4px,rgba(255,255,255,0.04) 5px)}
-body.dark-mode .pd-pat-grid{background-image:linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.04) 1px,transparent 1px)}
-body.dark-mode .pd-pat-cross{background-image:radial-gradient(rgba(255,255,255,0.05) 1.5px,transparent 1.5px),radial-gradient(rgba(255,255,255,0.05) 1.5px,transparent 1.5px)}
-.pd-section{margin-bottom:32px}
-.pd-section-title{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#999;margin-bottom:10px;font-weight:500}
-.pd-section-body{font-size:14px;line-height:1.8;color:#555;word-break:keep-all}
-body.dark-mode .pd-section-body{color:#999}
-.pd-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:32px}
-.pd-tag{padding:5px 12px;border:1px solid rgba(0,0,0,0.08);border-radius:20px;font-size:11px;color:#666;letter-spacing:0.02em}
-body.dark-mode .pd-tag{border-color:rgba(255,255,255,0.08);color:#888}
-.pd-meta{display:flex;gap:40px;padding-top:24px;border-top:1px solid rgba(0,0,0,0.04);margin-top:40px}
-body.dark-mode .pd-meta{border-top-color:rgba(255,255,255,0.04)}
-.pd-meta-item{display:flex;flex-direction:column;gap:4px}
-.pd-meta-label{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#aaa;font-weight:500}
-.pd-meta-value{font-size:13px;color:var(--text);font-weight:400}
-/* archive detail styles moved to map-card */
 
 /* MY PAGE */
 #page-mypage{padding-top:115px;overflow-y:auto}
@@ -1039,8 +920,6 @@ body.dark-mode .btn-price.primary{background:#fff;color:#000}
 body.dark-mode .btn-price.primary:hover{background:#ddd}
 body.dark-mode .btn-price.secondary{border-color:#333;color:#555}
 body.dark-mode .modal-close svg{stroke:#666}
-body.dark-mode .archive-map-title{color:#eee}
-body.dark-mode .archive-map-sub{color:#666}
 body.dark-mode .mypage-title{color:#eee}
 body.dark-mode .mypage-card{background:rgba(30,30,30,0.6);border-color:rgba(255,255,255,0.06)}
 body.dark-mode .mc-value{color:#eee}
@@ -1114,7 +993,6 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
     <li data-page="about" class="active">ABOUT</li>
     <li data-page="unmask">UNMASK</li>
     <li data-page="interpret">INTERPRET</li>
-    <li data-page="archive">ARCHIVE</li>
   </ul>
   <div class="nav-auth">
     <div class="lang-sel" id="langSel">
@@ -1144,7 +1022,6 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
   <li data-page="about">ABOUT</li>
   <li data-page="unmask">UNMASK</li>
   <li data-page="interpret">INTERPRET</li>
-  <li data-page="archive">ARCHIVE</li>
   <li id="mobileSignIn">SIGN IN</li>
 </div>
 <div id="canvas-container"></div>
@@ -1517,49 +1394,6 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
   </div>
 </div>
 
-<!-- ARCHIVE -->
-<div class="page" id="page-archive">
-  <div class="archive-map">
-    <div class="archive-map-header">
-      <h1 class="archive-map-title">실증의 기록.</h1>
-      <p class="archive-map-sub">Aletheia가 해석한 다양한 분야의 본질 아카이브.</p>
-    </div>
-    <div class="archive-map-canvas" id="archiveMapCanvas">
-      <svg class="map-lines" id="mapLines"></svg>
-      <div class="map-node" style="left:18%;top:32%" data-node="0">
-        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
-        <div class="map-label"><div class="map-label-cat">Cafe & Bakery</div><div class="map-label-name">GYEOL</div></div>
-      </div>
-      <div class="map-node" style="left:45%;top:22%" data-node="1">
-        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
-        <div class="map-label"><div class="map-label-cat">Space Design</div><div class="map-label-name">RAW CONCRETE</div></div>
-      </div>
-      <div class="map-node" style="left:75%;top:28%" data-node="2">
-        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
-        <div class="map-label"><div class="map-label-cat">Fashion</div><div class="map-label-name">STRUCTURE 01</div></div>
-      </div>
-      <div class="map-node" style="left:28%;top:62%" data-node="3">
-        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
-        <div class="map-label"><div class="map-label-cat">Fragrance</div><div class="map-label-name">DEEP SOIL</div></div>
-      </div>
-      <div class="map-node" style="left:55%;top:55%" data-node="4">
-        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
-        <div class="map-label"><div class="map-label-cat">Exhibition</div><div class="map-label-name">THE VOID</div></div>
-      </div>
-      <div class="map-node" style="left:80%;top:65%" data-node="5">
-        <div class="map-dot-glow"></div><div class="map-dot"></div><div class="map-orbit"><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div><div class="map-orbit-dot"></div></div><div class="map-spark s1"></div><div class="map-spark s2"></div><div class="map-spark s3"></div>
-        <div class="map-label"><div class="map-label-cat">Architecture</div><div class="map-label-name">MONOLITH</div></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- PROJECT DETAIL OVERLAY -->
-<div class="project-detail" id="projectDetail">
-  <div class="project-detail-bg"></div>
-  <button class="project-detail-close" id="pdClose"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-  <div class="project-detail-inner" id="pdInner"></div>
-</div>
 
 <!-- MY PAGE -->
 <div class="page" id="page-mypage">
@@ -1568,7 +1402,7 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
 
 <!-- MODALS -->
 <div class="modal-overlay" id="loginOverlay"><div class="login-modal"><div class="login-logo"><svg viewBox="0 0 24 24"><path d="M 5 19 A 10 10 0 1 1 19 19" fill="none" stroke-linecap="round"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/></svg></div><div class="login-title">Aletheia에 오신 것을 환영합니다</div><div class="login-sub">본질을 탐구하는 여정을 시작하세요.</div><button class="btn-google" id="btnGoogle"><svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Google로 계속하기</button><div class="login-terms">로그인 시 <a href="#">이용약관</a> 및 <a href="#">개인정보처리방침</a>에 동의합니다.</div></div></div>
-<div class="modal-overlay" id="pricingOverlay"><div class="pricing-modal"><button class="modal-close" id="pricingClose"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button><div class="pricing-title">당신의 본질에 투자하세요.</div><div class="pricing-sub">Aletheia의 서비스를 선택하세요.</div><div class="pricing-grid"><div class="price-card"><div class="pc-name">Explorer</div><div class="pc-price">₩0 <span>/ 영구</span></div><div class="pc-desc">Aletheia의 철학을 경험하세요.</div><ul class="pc-features"><li data-i18n="priceFeat1">Unmask 기본 대화 (일 10세션)</li><li>Unmask 실시간 프로필</li><li>Archive 열람</li></ul><button class="btn-price secondary" disabled>현재 플랜</button></div><div class="price-card featured"><div class="pc-name">Seeker</div><div class="pc-price">₩29,000 <span>/ 월</span></div><div class="pc-desc">본질을 깊이 탐구하는 풀 서비스.</div><ul class="pc-features"><li>Unmask 무제한 대화</li><li>Unmask 심층 분석</li><li>Interpret 분야 해석</li><li>채팅 기록 저장·열람</li><li>Deep / Interpret 모델 해금</li></ul><button class="btn-price primary" id="btnCheckout">구독 시작 →</button></div></div></div></div>
+<div class="modal-overlay" id="pricingOverlay"><div class="pricing-modal"><button class="modal-close" id="pricingClose"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button><div class="pricing-title">당신의 본질에 투자하세요.</div><div class="pricing-sub">Aletheia의 서비스를 선택하세요.</div><div class="pricing-grid"><div class="price-card"><div class="pc-name">Explorer</div><div class="pc-price">₩0 <span>/ 영구</span></div><div class="pc-desc">Aletheia의 철학을 경험하세요.</div><ul class="pc-features"><li data-i18n="priceFeat1">Unmask 기본 대화 (일 10세션)</li><li>Unmask 실시간 프로필</li><li>Interpret 열람</li></ul><button class="btn-price secondary" disabled>현재 플랜</button></div><div class="price-card featured"><div class="pc-name">Seeker</div><div class="pc-price">₩29,000 <span>/ 월</span></div><div class="pc-desc">본질을 깊이 탐구하는 풀 서비스.</div><ul class="pc-features"><li>Unmask 무제한 대화</li><li>Unmask 심층 분석</li><li>Interpret 분야 해석</li><li>채팅 기록 저장·열람</li><li>Deep / Interpret 모델 해금</li></ul><button class="btn-price primary" id="btnCheckout">구독 시작 →</button></div></div></div></div>
 <div id="modelMenu"><div class="mm-opt" data-model="Core" data-color="#000" data-tier="free"><span class="md" style="background:#000"></span>Aletheia Core</div><div class="mm-opt" data-model="Deep" data-color="#444" data-tier="seeker"><span class="md" style="background:#444"></span>Aletheia Deep<span class="mm-lock">PRO</span></div><div class="mm-opt" data-model="Interpret" data-color="#666" data-tier="seeker"><span class="md" style="background:#666"></span>Interpret v1<span class="mm-lock">PRO</span></div></div>
 
 <script>
@@ -1631,7 +1465,7 @@ var I18N={
     explorerName:'Explorer',seekerName:'Seeker',
     explorerPrice:'₩0',explorerUnit:'/ 영구',explorerDesc:'Aletheia의 철학을 경험하세요.',
     seekerPrice:'₩29,000',seekerUnit:'/ 월',seekerDesc:'본질을 깊이 탐구하는 풀 서비스.',
-    priceFeat1:'Unmask 기본 대화 (일 10세션)',priceFeat2:'Unmask 실시간 프로필',priceFeat3:'Archive 열람',
+    priceFeat1:'Unmask 기본 대화 (일 10세션)',priceFeat2:'Unmask 실시간 프로필',priceFeat3:'Interpret 열람',
     priceFeat4:'Unmask 무제한 대화',priceFeat5:'Unmask 심층 분석',priceFeat6:'Interpret 분야 해석',priceFeat7:'채팅 기록 저장·열람',priceFeat8:'Deep / Interpret 모델 해금',
     currentPlan:'현재 플랜',startSub:'구독 시작 →',upgrade:'구독 시작하기',
     newChat:'새 대화',bookmark:'북마크',gallery:'갤러리',profile:'Unmask',history:'이전 대화',
@@ -1670,7 +1504,6 @@ var I18N={
     unmaskTitle:'Discover yourself.',unmaskDesc:'Start a conversation and your contours will emerge.<br>Values, patterns, avoidance — everything accumulates here.',
     unmaskTitle:'A map that knows you<br>better than you.',unmaskDesc:'Data extracted from Core — values, patterns, avoidance.<br>All synthesized into a single profile.',unmaskBtn:'Start dialogue in Core',
     interpTitle:'Interpreting the essence of fields.',interpDesc:'Revealing the hidden essence of brands, industries, and external subjects.',interpPh:'Enter a field or brand',interpGo:'Start Interpret',
-    archTitle:'Record of Proof.',archSub:'An archive of essences interpreted by Aletheia across various fields.',
     welcomeT:'What drives you?',welcomeS:'We extract the essence from your story.',
     chatPh:'Start a conversation...',
     chip1:'Café startup',chip2:'Self-discovery',chip3:'Brand direction',
@@ -1686,7 +1519,7 @@ var I18N={
     explorerName:'Explorer',seekerName:'Seeker',
     explorerPrice:'$0',explorerUnit:'/ forever',explorerDesc:'Experience the philosophy of Aletheia.',
     seekerPrice:'$29',seekerUnit:'/ month',seekerDesc:'Full service for deep essence exploration.',
-    priceFeat1:'Core basic dialogue (10/day)',priceFeat2:'Unmask basic profile',priceFeat3:'Archive access',
+    priceFeat1:'Core basic dialogue (10/day)',priceFeat2:'Unmask basic profile',priceFeat3:'Interpret access',
     priceFeat4:'Core unlimited dialogue',priceFeat5:'Unmask deep profile',priceFeat6:'Interpret field analysis',priceFeat7:'Chat history save & view',priceFeat8:'Deep / Interpret model unlock',
     currentPlan:'Current plan',startSub:'Start subscription →',upgrade:'Start subscription',
     newChat:'New chat',bookmark:'Bookmark',gallery:'Gallery',profile:'Unmask',history:'Previous chats',
@@ -1794,9 +1627,6 @@ function applyLang(){
   var inD=document.querySelector('#page-interpret .svc-intro-desc');if(inD)inD.innerHTML=t('interpDesc');
   var inPh=document.getElementById('interpretInput');if(inPh)inPh.placeholder=t('interpPh');
   var inGo=document.getElementById('interpretGo');if(inGo&&!inGo.disabled)inGo.textContent=t('interpGo');
-  /* Archive */
-  var archT=document.querySelector('.archive-map-title');if(archT)archT.textContent=t('archTitle');
-  var archS=document.querySelector('.archive-map-sub');if(archS)archS.textContent=t('archSub');
   /* Chat */
   var wT=document.querySelector('.cb-welcome-t');if(wT)wT.textContent=t('welcomeT');
   var wS=document.querySelector('.cb-welcome-s');if(wS)wS.textContent=t('welcomeS');
@@ -1937,7 +1767,7 @@ function switchPage(page){
   document.querySelectorAll('.nav-center li').forEach(function(l){l.classList.toggle('active',l.getAttribute('data-page')===page)});
   document.getElementById('coreWrap').style.display=(page==='unmask')?'flex':'none';
   if(page!=='unmask'){collapseChat()}
-  if(page==='about'||page==='archive'){document.body.style.overflow='auto';el.style.overflow='auto'}else{document.body.style.overflow='hidden'}
+  if(page==='about'){document.body.style.overflow='auto';el.style.overflow='auto'}else{document.body.style.overflow='hidden'}
   if(page==='unmask'){
     if(window._alScene)window._alScene.unmaskMode=true;
     var _dtc=document.getElementById('dotTextCanvas');
@@ -3152,147 +2982,6 @@ document.querySelectorAll('.method-row').forEach(function(row){row.addEventListe
 })();
 /* ===== END GSAP + LENIS SCROLL SYSTEM ===== */
 
-/* ARCHIVE MAP – draw connecting lines */
-(function(){
-  var connections=[[0,1],[1,2],[0,3],[1,4],[2,5],[3,4],[4,5]];
-  var canvas=document.getElementById('archiveMapCanvas');
-  var svg=document.getElementById('mapLines');
-  if(!canvas||!svg)return;
-  function drawLines(){
-    svg.innerHTML='';
-    var nodes=canvas.querySelectorAll('.map-node');
-    var cRect=canvas.getBoundingClientRect();
-    connections.forEach(function(c){
-      var a=nodes[c[0]],b=nodes[c[1]];
-      if(!a||!b)return;
-      var aR=a.getBoundingClientRect(),bR=b.getBoundingClientRect();
-      var x1=aR.left-cRect.left+aR.width/2,y1=aR.top-cRect.top+aR.height/2;
-      var x2=bR.left-cRect.left+bR.width/2,y2=bR.top-cRect.top+bR.height/2;
-      var line=document.createElementNS('http://www.w3.org/2000/svg','line');
-      line.setAttribute('x1',x1);line.setAttribute('y1',y1);
-      line.setAttribute('x2',x2);line.setAttribute('y2',y2);
-      svg.appendChild(line);
-    });
-  }
-  var obs=new MutationObserver(function(){if(canvas.closest('.page.active'))setTimeout(drawLines,100)});
-  obs.observe(document.getElementById('page-archive'),{attributes:true,attributeFilter:['class']});
-  window.addEventListener('resize',function(){if(canvas.closest('.page.active'))drawLines()});
-  setTimeout(drawLines,500);
-})();
-
-/* PROJECT DETAIL */
-(function(){
-  var PROJECTS=[
-    {cat:'Cafe & Bakery',name:'GYEOL',sub:'침묵의 서사',
-     desc:'불필요한 소음을 제거하고 재료 본연의 소리에 집중하는 베이커리. 모든 메뉴는 하나의 재료에서 출발하며, 그 재료가 가진 고유한 결을 최대한 살리는 방식으로 만들어진다.',
-     tags:['Minimalism','Silence','Material-first','Sensory'],
-     meta:{field:'F&B',method:'Core → Unmask',period:'2024.03 – 2024.06'},
-     patterns:['dots','lines','grid'],
-     images:{main:'/images/gyeol/main.jpg',d1:'/images/gyeol/detail-01.jpg',d2:'/images/gyeol/detail-02.jpg'}},
-    {cat:'Space Design',name:'RAW CONCRETE',sub:'가공되지 않은 날것',
-     desc:'거친 콘크리트 텍스처를 그대로 살려 진정성을 투영하는 공간 브랜드. 마감하지 않는 것이 마감이며, 시간이 지남에 따라 자연스러운 풍화가 곧 디자인이 된다.',
-     tags:['Brutalism','Authenticity','Time','Unfinished'],
-     meta:{field:'Space Design',method:'Interpret → Core',period:'2024.01 – 2024.04'},
-     patterns:['grid','cross','lines'],
-     images:{main:'/images/raw-concrete/main.jpg',d1:'/images/raw-concrete/detail-01.jpg',d2:'/images/raw-concrete/detail-02.jpg'}},
-    {cat:'Fashion',name:'STRUCTURE 01',sub:'기능적 본질주의',
-     desc:'장식을 배제하고 옷의 구조와 기능에만 집중한 레이블. 모든 시접은 외부로 노출되며, 봉제 과정 자체가 디자인 언어가 된다.',
-     tags:['Structure','Function','Less','Exposed'],
-     meta:{field:'Fashion',method:'Core → Interpret',period:'2024.05 – 2024.08'},
-     patterns:['lines','dots','cross'],
-     images:{main:'/images/structure-01/main.jpg',d1:'/images/structure-01/detail-01.jpg',d2:'/images/structure-01/detail-02.jpg'}},
-    {cat:'Fragrance',name:'DEEP SOIL',sub:'고향의 흙냄새',
-     desc:'원초적인 기억인 흙의 향기를 현대적으로 재해석한 프래그런스 브랜드. 베이스 노트로만 구성된 비대칭 향수를 만든다.',
-     tags:['Memory','Earth','Base-note','Primal'],
-     meta:{field:'Fragrance',method:'Core → Unmask → Interpret',period:'2024.02 – 2024.05'},
-     patterns:['cross','dots','grid'],
-     images:{main:'/images/deep-soil/main.jpg',d1:'/images/deep-soil/detail-01.jpg',d2:'/images/deep-soil/detail-02.jpg'}},
-    {cat:'Exhibition',name:'THE VOID',sub:'비움의 미학',
-     desc:'아무것도 전시하지 않음으로써 관람객을 전시품으로 만드는 공간. 빈 화이트 큐브에 들어선 관람객은 자신의 그림자, 발소리, 호흡만을 인식하게 된다.',
-     tags:['Void','Self','Mirror','Nothing'],
-     meta:{field:'Exhibition',method:'Interpret',period:'2024.07 – 2024.09'},
-     patterns:['dots','grid','lines'],
-     images:{main:'/images/the-void/main.jpg',d1:'/images/the-void/detail-01.jpg',d2:'/images/the-void/detail-02.jpg'}},
-    {cat:'Architecture',name:'MONOLITH',sub:'단일한 거대함',
-     desc:'이음새 없는 거대한 검은 돌덩어리. 압도적 숭고미를 추구하는 건축 프로젝트. 단일 소재, 단일 형태, 단일 색상으로 인간이 자연 앞에서 느끼는 원초적인 경외감을 재현한다.',
-     tags:['Sublime','Monolithic','Black','Awe'],
-     meta:{field:'Architecture',method:'Core → Interpret',period:'2024.04 – 2024.10'},
-     patterns:['grid','lines','cross'],
-     images:{main:'/images/monolith/main.jpg',d1:'/images/monolith/detail-01.jpg',d2:'/images/monolith/detail-02.jpg'}}
-  ];
-  var PAT_CLASS={dots:'pd-pat-dots',lines:'pd-pat-lines',grid:'pd-pat-grid',cross:'pd-pat-cross'};
-  var detail=document.getElementById('projectDetail');
-  var inner=document.getElementById('pdInner');
-  var closeBtn=document.getElementById('pdClose');
-  /* Pre-build all HTML */
-  var prebuilt=PROJECTS.map(function(p){
-    var h='<div class="pd-cat">'+p.cat+'</div>';
-    h+='<div class="pd-name">'+p.name+'</div>';
-    h+='<div class="pd-sub">'+p.sub+'</div>';
-    function imgOrPat(src,pat,label,wide){
-      var cls=wide?'pd-gallery-item wide':'pd-gallery-item';
-      if(src)return '<div class="'+cls+'"><img src="'+src+'" alt="'+label+'" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'"><div class="pd-gallery-placeholder '+PAT_CLASS[pat]+'" style="display:none">'+label+'</div></div>';
-      return '<div class="'+cls+'"><div class="pd-gallery-placeholder '+PAT_CLASS[pat]+'">'+label+'</div></div>';
-    }
-    h+='<div class="pd-gallery">'+imgOrPat(p.images.main,p.patterns[0],p.name,true)+imgOrPat(p.images.d1,p.patterns[1],'Detail 01')+imgOrPat(p.images.d2,p.patterns[2],'Detail 02')+'</div>';
-    h+='<div class="pd-tags">';p.tags.forEach(function(t){h+='<span class="pd-tag">'+t+'</span>'});h+='</div>';
-    h+='<div class="pd-section"><div class="pd-section-title">Essence</div><div class="pd-section-body">'+p.desc+'</div></div>';
-    h+='<div class="pd-meta"><div class="pd-meta-item"><span class="pd-meta-label">Field</span><span class="pd-meta-value">'+p.meta.field+'</span></div><div class="pd-meta-item"><span class="pd-meta-label">Method</span><span class="pd-meta-value">'+p.meta.method+'</span></div><div class="pd-meta-item"><span class="pd-meta-label">Period</span><span class="pd-meta-value">'+p.meta.period+'</span></div></div>';
-    return h;
-  });
-  function openProject(idx){
-    if(!prebuilt[idx])return;
-    window._alPaused=true;
-    document.body.classList.add('pd-open');
-    inner.innerHTML=prebuilt[idx];
-    inner.scrollTop=0;
-    requestAnimationFrame(function(){detail.classList.add('show')});
-  }
-  function closeProject(){detail.classList.remove('show');document.body.classList.remove('pd-open');setTimeout(function(){window._alPaused=false},650)}
-  closeBtn.addEventListener('click',closeProject);
-  detail.querySelector('.project-detail-bg').addEventListener('click',closeProject);
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&detail.classList.contains('show'))closeProject()});
-  /* Mouse proximity glow on map */
-  var mapCanvas=document.getElementById('archiveMapCanvas');
-  if(mapCanvas){
-    var mapNodes=mapCanvas.querySelectorAll('.map-node');
-    mapCanvas.addEventListener('mousemove',function(e){
-      var cr=mapCanvas.getBoundingClientRect();
-      var mx=e.clientX-cr.left,my=e.clientY-cr.top;
-      mapNodes.forEach(function(node){
-        var nr=node.getBoundingClientRect();
-        var nx=nr.left-cr.left+nr.width/2,ny=nr.top-cr.top+nr.height/2;
-        var dist=Math.sqrt((mx-nx)*(mx-nx)+(my-ny)*(my-ny));
-        var maxD=180,glow=Math.max(0,1-dist/maxD);
-        var dot=node.querySelector('.map-dot');
-        var glowEl=node.querySelector('.map-dot-glow');
-        if(glow>0){
-          var s=1+glow*0.8;
-          var isDk=document.body.classList.contains('dark-mode');
-          var shadow=isDk?'0 0 '+(glow*30)+'px rgba(255,255,255,'+(glow*0.4)+')':'0 0 '+(glow*25)+'px rgba(0,0,0,'+(glow*0.2)+')';
-          dot.style.transform='scale('+s+')';
-          dot.style.boxShadow=shadow;
-          if(glowEl)glowEl.style.transform='translate(-50%,-50%) scale('+(1.5+glow*1.5)+')';
-        } else {
-          dot.style.transform='';dot.style.boxShadow='';
-          if(glowEl)glowEl.style.transform='';
-        }
-      });
-    });
-    mapCanvas.addEventListener('mouseleave',function(){
-      mapNodes.forEach(function(node){
-        var dot=node.querySelector('.map-dot');
-        var glowEl=node.querySelector('.map-dot-glow');
-        dot.style.transform='';dot.style.boxShadow='';
-        if(glowEl)glowEl.style.transform='';
-      });
-    });
-  }
-
-  document.querySelectorAll('.map-node').forEach(function(node){
-    node.addEventListener('click',function(){openProject(parseInt(node.getAttribute('data-node')))});
-  });
-})();
 
 /* SCROLL PARALLAX + HIDE SCROLL INDICATOR (GSAP-powered) */
 (function(){

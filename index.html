@@ -709,7 +709,9 @@ body.dark-mode .um-depth-fill{background:#fff;opacity:0.25}
 .btn-unmask-start:hover{background:#222}
 
 /* INTERPRET */
-.interpret-input-wrap{display:flex;gap:10px;max-width:420px;margin:28px auto 0}
+.interpret-bar{position:fixed;left:0;right:0;bottom:0;width:100%;display:flex;justify-content:center;padding:0 24px 24px;z-index:9999;pointer-events:none}
+.interpret-bar>*{pointer-events:auto}
+.interpret-input-wrap{display:flex;gap:10px;max-width:420px;width:100%}
 .interpret-input{flex:1;padding:13px 18px;border:1px solid rgba(0,0,0,0.08);border-radius:10px;font-size:14px;font-family:inherit;outline:none;transition:0.2s;background:rgba(255,255,255,0.7);backdrop-filter:blur(10px)}
 .interpret-input:focus{border-color:rgba(0,0,0,0.2);background:rgba(255,255,255,0.9)}
 .interpret-go{padding:13px 24px;background:#000;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;transition:0.2s;font-family:inherit}
@@ -1380,7 +1382,7 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
 
 <!-- INTERPRET -->
 <div class="page" id="page-interpret">
-  <div class="svc-page"><div class="svc-intro"><div class="svc-intro-num svc-anim" data-delay="0">/0.3</div><h2 class="svc-intro-title svc-anim" data-delay="100">산업의 본질을<br>교차시킵니다.</h2><p class="svc-intro-desc svc-anim" data-delay="200">진입하려는 분야를 입력하세요.<br>그 분야가 진짜로 팔고 있는 것과 당신의 본질이 만나는 지점.</p><div class="interpret-input-wrap svc-anim" data-delay="300"><input class="interpret-input" id="interpretInput" placeholder="예: 스페셜티 커피"/><button class="interpret-go" id="interpretGo">해석 시작</button></div></div>
+  <div class="svc-page"><div class="svc-intro" style="display:none"><div class="svc-intro-num svc-anim" data-delay="0">/0.3</div><h2 class="svc-intro-title svc-anim" data-delay="100">산업의 본질을<br>교차시킵니다.</h2><p class="svc-intro-desc svc-anim" data-delay="200">진입하려는 분야를 입력하세요.<br>그 분야가 진짜로 팔고 있는 것과 당신의 본질이 만나는 지점.</p></div>
   <div class="interpret-result" id="interpretResult" style="display:none">
     <div class="ir-header"><span class="ir-field" id="irField"></span><span class="ir-badge">INTERPRET ANALYSIS</span></div>
     <div class="ir-grid">
@@ -1392,6 +1394,10 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
     <div class="ir-insight"><div class="ir-card-title">핵심 인사이트</div><div class="ir-card-body" id="irInsight"></div></div>
   </div>
   </div>
+</div>
+<!-- Interpret 입력 — 하단 고정 (unmask chatbox와 동일 패턴) -->
+<div class="interpret-bar" id="interpretBar" style="display:none">
+  <div class="interpret-input-wrap"><input class="interpret-input" id="interpretInput" placeholder="예: 스페셜티 커피"/><button class="interpret-go" id="interpretGo">해석 시작</button></div>
 </div>
 
 
@@ -1768,27 +1774,20 @@ function switchPage(page){
   document.getElementById('coreWrap').style.display=(page==='unmask')?'flex':'none';
   if(page!=='unmask'){collapseChat()}
   if(page==='about'){document.body.style.overflow='auto';el.style.overflow='auto'}else{document.body.style.overflow='hidden'}
+  /* interpret 입력바 토글 */
+  document.getElementById('interpretBar').style.display=(page==='interpret')?'flex':'none';
   if(page==='unmask'){
     if(window._alScene)window._alScene.unmaskMode=true;
     if(typeof drawDotText==='function')drawDotText(currentLang);
+    if(typeof stopInterpDots==='function')stopInterpDots();
   }else if(page==='interpret'){
     if(window._alScene)window._alScene.unmaskMode=false;
     if(typeof stopDotText==='function')stopDotText();
-    /* interpret: HTML 타이틀/설명 숨기고 dotTextCanvas에 점으로 렌더 */
-    var _iTitle=document.querySelector('#page-interpret .svc-intro-title');
-    var _iDesc=document.querySelector('#page-interpret .svc-intro-desc');
-    if(_iTitle)_iTitle.style.display='none';
-    if(_iDesc)_iDesc.style.display='none';
     if(typeof drawInterpDots==='function')drawInterpDots(currentLang);
   }else{
     if(window._alScene)window._alScene.unmaskMode=false;
     if(typeof stopDotText==='function')stopDotText();
     if(typeof stopInterpDots==='function')stopInterpDots();
-    /* interpret HTML 복원 */
-    var _iTitle2=document.querySelector('#page-interpret .svc-intro-title');
-    var _iDesc2=document.querySelector('#page-interpret .svc-intro-desc');
-    if(_iTitle2)_iTitle2.style.display='';
-    if(_iDesc2)_iDesc2.style.display='';
   }
   /* 등장 모션 */
   el.querySelectorAll('.svc-anim').forEach(function(a){a.classList.remove('visible')});
@@ -3456,9 +3455,14 @@ function _interpFrame(){
       tx=p.vside==='left'?p.vx2+ov*0.5:p.vx2-ov*0.5;
       ty=p.vy2;
     }else{
-      var fy=Math.sin(now*0.6+p.hx*0.008)*3;
-      var fx=Math.cos(now*0.5+p.hy*0.008)*2.5;
-      tx=p.hx+fx;ty=p.hy+fy;
+      /* 텍스트 도트: 고정 / 기하 도트: 미세 부유 */
+      if(p.isGeo){
+        var fy=Math.sin(now*0.6+p.hx*0.008)*3;
+        var fx=Math.cos(now*0.5+p.hy*0.008)*2.5;
+        tx=p.hx+fx;ty=p.hy+fy;
+      }else{
+        tx=p.hx;ty=p.hy;
+      }
     }
 
     /* 스프링 (dotText와 동일) */

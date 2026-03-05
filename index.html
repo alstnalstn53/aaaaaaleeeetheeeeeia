@@ -403,8 +403,6 @@ body.dark-mode .urp-empty{color:#555}
 .svc-page{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;position:relative;background:transparent}
 #dotTextCanvas{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:1;background:transparent;border:none;outline:none;pointer-events:none}
 #dotTextCanvas.interactive{pointer-events:auto}
-#interpretCanvas{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:1;background:transparent;border:none;outline:none;pointer-events:none}
-#interpretCanvas.interactive{pointer-events:auto}
 .svc-intro{text-align:center;max-width:560px;padding:0 30px}
 .svc-intro-num{font-size:11px;font-weight:600;color:#bbb;letter-spacing:0.15em;margin-bottom:16px}
 .svc-intro-title{font-size:clamp(28px,3.5vw,48px);font-weight:400;letter-spacing:-0.02em;margin-bottom:16px;color:#111}
@@ -1028,7 +1026,6 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
 </div>
 <div id="canvas-container"></div>
 <canvas id="dotTextCanvas"></canvas>
-<canvas id="interpretCanvas"></canvas>
 
 <!-- ABOUT -->
 <div class="page active" id="page-about">
@@ -1773,18 +1770,25 @@ function switchPage(page){
   if(page==='about'){document.body.style.overflow='auto';el.style.overflow='auto'}else{document.body.style.overflow='hidden'}
   if(page==='unmask'){
     if(window._alScene)window._alScene.unmaskMode=true;
-    var _dtc=document.getElementById('dotTextCanvas');
-    if(_dtc){
-      if(typeof drawDotText==='function')drawDotText(currentLang);
-    }
+    if(typeof drawDotText==='function')drawDotText(currentLang);
+  }else if(page==='interpret'){
+    if(window._alScene)window._alScene.unmaskMode=false;
+    if(typeof stopDotText==='function')stopDotText();
+    /* interpret: HTML 타이틀/설명 숨기고 dotTextCanvas에 점으로 렌더 */
+    var _iTitle=document.querySelector('#page-interpret .svc-intro-title');
+    var _iDesc=document.querySelector('#page-interpret .svc-intro-desc');
+    if(_iTitle)_iTitle.style.display='none';
+    if(_iDesc)_iDesc.style.display='none';
+    if(typeof drawInterpDots==='function')drawInterpDots(currentLang);
   }else{
     if(window._alScene)window._alScene.unmaskMode=false;
     if(typeof stopDotText==='function')stopDotText();
-  }
-  if(page==='interpret'){
-    if(typeof startInterpCanvas==='function')startInterpCanvas();
-  }else{
-    if(typeof stopInterpCanvas==='function')stopInterpCanvas();
+    if(typeof stopInterpDots==='function')stopInterpDots();
+    /* interpret HTML 복원 */
+    var _iTitle2=document.querySelector('#page-interpret .svc-intro-title');
+    var _iDesc2=document.querySelector('#page-interpret .svc-intro-desc');
+    if(_iTitle2)_iTitle2.style.display='';
+    if(_iDesc2)_iDesc2.style.display='';
   }
   /* 등장 모션 */
   el.querySelectorAll('.svc-anim').forEach(function(a){a.classList.remove('visible')});
@@ -3207,7 +3211,16 @@ function _drawFrame(){
 /* 폰트 프리로드만 */
 document.fonts.ready.then(function(){});
 
-/* ===== Interpret Canvas v2 — 3D Stipple Stack + Bauhaus Typography ===== */
+/* ===== Interpret Dots — dotTextCanvas 통합, 3D 스티플 + 텍스트 도트 ===== */
+var _INTERP_TEXT={
+  ko:{t1:'분야의 본질을',t2:'해석합니다.',s1:'브랜드, 산업, 외부 대상의 숨겨진 본질을',s2:'드러냅니다.',
+    tf:'700 38px Pretendard,"Helvetica Neue",sans-serif',sf:'500 16px Pretendard,"Helvetica Neue",sans-serif'},
+  en:{t1:'Interpreting the essence',t2:'of fields.',s1:'Revealing the hidden essence of brands,',s2:'industries, and external subjects.',
+    tf:'700 40px "Helvetica Neue",Inter,Arial,sans-serif',sf:'500 16px "Helvetica Neue",Inter,Arial,sans-serif'},
+  es:{t1:'Interpretando la esencia',t2:'de los campos.',s1:'Revelando la esencia oculta de marcas,',s2:'industrias y sujetos externos.',
+    tf:'700 36px "Helvetica Neue",Inter,Arial,sans-serif',sf:'500 15px "Helvetica Neue",Inter,Arial,sans-serif'}
+};
+
 var _interpSys={
   state:'off',canvas:null,ctx:null,vw:0,vh:0,dpr:1,
   mx:-9999,my:-9999,t0:0,stateT:0,rafId:null,
@@ -3216,7 +3229,7 @@ var _interpSys={
 
 function _iRng(s){return function(){s=(s*16807+0)%2147483647;return(s&0x7fffffff)/2147483647}}
 
-/* 3D 회전 헬퍼 */
+/* 3D 회전 */
 function _rX(x,y,z,a){var c=Math.cos(a),s=Math.sin(a);return[x,y*c-z*s,y*s+z*c]}
 function _rY(x,y,z,a){var c=Math.cos(a),s=Math.sin(a);return[x*c+z*s,y,-x*s+z*c]}
 function _rZ(x,y,z,a){var c=Math.cos(a),s=Math.sin(a);return[x*c-y*s,x*s+y*c,z]}
@@ -3228,50 +3241,46 @@ function _rot(x,y,z,rx,ry,rz){
   return p;
 }
 
-/* 스티플 셰이딩 — 라이트 top-front-left */
+/* 스티플 셰이딩 */
 function _shade(nx,ny,nz){
   var d=nx*(-0.3)+ny*0.7+nz*0.5;
   return 0.06+0.58*(1-(d*0.5+0.5));
 }
 
-/* 3D 표면점 → 도트 객체 변환 */
-function _mkDot(scx,scy,p,nn,rng,si,db){
+/* 3D → 도트 (dotText와 동일한 dk 기반 스타일) */
+function _mk3d(scx,scy,p,nn,rng,si,db){
   var sh=_shade(nn[0],nn[1],nn[2]);
   return{hx:scx+p[0],hy:scy-p[1],
-    x:scx+p[0]+(rng()-0.5)*600,y:scy-p[1]+(rng()-0.5)*600,
-    vx:0,vy:0,alpha:0,shade:sh,depth:p[2],shape:si,
-    delay:db+rng()*2.0,dotR:0.35+sh*0.9};
+    x:rng()*(_interpSys.vw||1000),y:rng()*(_interpSys.vh||800),
+    vx:0,vy:0,dk:sh,alpha:0,delay:db+rng()*2.0,shape:si,isGeo:true};
 }
 
-/* 구 — Fibonacci 분포 */
+/* 구 — Fibonacci */
 function _gSphere(scx,scy,r,n,rng,si,rx,ry,rz){
   var dots=[];
   for(var i=0;i<n;i++){
     var phi=Math.acos(1-2*(i+0.5)/n);
     var th=Math.PI*(1+Math.sqrt(5))*i;
     var nx0=Math.sin(phi)*Math.cos(th),ny0=Math.cos(phi),nz0=Math.sin(phi)*Math.sin(th);
-    var p=_rot(nx0*r,ny0*r,nz0*r,rx,ry,rz);
-    var nn=_rot(nx0,ny0,nz0,rx,ry,rz);
-    dots.push(_mkDot(scx,scy,p,nn,rng,si,0.2));
+    dots.push(_mk3d(scx,scy,_rot(nx0*r,ny0*r,nz0*r,rx,ry,rz),_rot(nx0,ny0,nz0,rx,ry,rz),rng,si,0.2));
   }
   return dots;
 }
 
-/* 원뿔 표면 */
+/* 원뿔 */
 function _gCone(scx,scy,r,h,n,rng,si,rx,ry,rz){
   var dots=[],sl=Math.sqrt(r*r+h*h);
   for(var i=0;i<n;i++){
     var t=rng(),th=rng()*6.2832;
-    var cr2=r*(1-t),x3=Math.cos(th)*cr2,z3=Math.sin(th)*cr2,y3=-h/2+t*h;
-    var nx0=Math.cos(th)*h/sl,ny0=r/sl,nz0=Math.sin(th)*h/sl;
-    var p=_rot(x3,y3,z3,rx,ry,rz);
-    var nn=_rot(nx0,ny0,nz0,rx,ry,rz);
-    dots.push(_mkDot(scx,scy,p,nn,rng,si,0.4));
+    var cr2=r*(1-t);
+    dots.push(_mk3d(scx,scy,
+      _rot(Math.cos(th)*cr2,-h/2+t*h,Math.sin(th)*cr2,rx,ry,rz),
+      _rot(Math.cos(th)*h/sl,r/sl,Math.sin(th)*h/sl,rx,ry,rz),rng,si,0.4));
   }
   return dots;
 }
 
-/* 큐브 — 6면 균등 샘플링 */
+/* 큐브 */
 function _gCube(scx,scy,sz,n,rng,si,rx,ry,rz){
   var dots=[],hs=sz/2,per=Math.floor(n/6);
   var faces=[[0,1,0],[0,-1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]];
@@ -3283,59 +3292,78 @@ function _gCube(scx,scy,sz,n,rng,si,rx,ry,rz){
       if(fn[1]!==0){x3=u;y3=fn[1]*hs;z3=v}
       else if(fn[0]!==0){x3=fn[0]*hs;y3=u;z3=v}
       else{x3=u;y3=v;z3=fn[2]*hs}
-      var p=_rot(x3,y3,z3,rx,ry,rz);
-      var nn=_rot(fn[0],fn[1],fn[2],rx,ry,rz);
-      dots.push(_mkDot(scx,scy,p,nn,rng,si,0.5));
+      dots.push(_mk3d(scx,scy,_rot(x3,y3,z3,rx,ry,rz),_rot(fn[0],fn[1],fn[2],rx,ry,rz),rng,si,0.5));
     }
   }
   return dots;
 }
 
-/* 실린더 — 측면 + 캡 */
+/* 실린더 */
 function _gCyl(scx,scy,r,h,n,rng,si,rx,ry,rz){
   var dots=[];
   var sideN=Math.floor(n*0.7),capN=Math.floor(n*0.15);
   for(var i=0;i<sideN;i++){
     var th=rng()*6.2832,y3=-h/2+rng()*h;
-    var p=_rot(Math.cos(th)*r,y3,Math.sin(th)*r,rx,ry,rz);
-    var nn=_rot(Math.cos(th),0,Math.sin(th),rx,ry,rz);
-    dots.push(_mkDot(scx,scy,p,nn,rng,si,0.4));
+    dots.push(_mk3d(scx,scy,_rot(Math.cos(th)*r,y3,Math.sin(th)*r,rx,ry,rz),
+      _rot(Math.cos(th),0,Math.sin(th),rx,ry,rz),rng,si,0.4));
   }
   for(var c=0;c<2;c++){
     var cy3=c===0?h/2:-h/2,ny=c===0?1:-1;
     for(var i=0;i<capN;i++){
       var a=rng()*6.2832,d=rng()*r;
-      var p=_rot(Math.cos(a)*d,cy3,Math.sin(a)*d,rx,ry,rz);
-      var nn=_rot(0,ny,0,rx,ry,rz);
-      dots.push(_mkDot(scx,scy,p,nn,rng,si,0.5));
+      dots.push(_mk3d(scx,scy,_rot(Math.cos(a)*d,cy3,Math.sin(a)*d,rx,ry,rz),
+        _rot(0,ny,0,rx,ry,rz),rng,si,0.5));
     }
   }
   return dots;
 }
 
-/* 래퍼런스3 스타일 수직 스택 구축 */
-function _buildStack(vw,vh){
-  var rng=_iRng(42);
-  var cx=vw/2,baseY=vh/2+110;
+/* 텍스트 → 도트 샘플링 (dotText와 동일한 방식) */
+function _sampleTextDots(lang,vw,vh,rng){
+  var tx=_INTERP_TEXT[lang]||_INTERP_TEXT['en'];
+  var TW=520,TH=170,S=4;
+  var off=document.createElement('canvas');off.width=TW*S;off.height=TH*S;
+  var ox=off.getContext('2d');ox.scale(S,S);
+  ox.fillStyle='#fff';ox.fillRect(0,0,TW,TH);
+  ox.fillStyle='#000';ox.textAlign='center';
+  ox.font=tx.tf;ox.fillText(tx.t1,TW/2,42);ox.fillText(tx.t2,TW/2,90);
+  ox.font=tx.sf;ox.fillText(tx.s1,TW/2,130);ox.fillText(tx.s2,TW/2,154);
+  var imgD=ox.getImageData(0,0,TW*S,TH*S).data;
+  var oW=TW*S;
+  /* 텍스트 위치: 화면 상단 영역 (입력란 위) */
+  var offX=(vw-TW)/2, offY=vh*0.12;
+  var dots=[],sp=1.6;
+  for(var y=0;y<TH;y+=sp){for(var x=0;x<TW;x+=sp){
+    var sx=Math.floor(x*S),sy=Math.floor(y*S);
+    var idx=(sy*oW+sx)*4;
+    var dk=1-(imgD[idx]+imgD[idx+1]+imgD[idx+2])/(3*255);
+    if(dk>0.3){
+      dots.push({hx:offX+x+(rng()-0.5)*1.0,hy:offY+y+(rng()-0.5)*1.0,
+        x:rng()*vw,y:rng()*vh,vx:0,vy:0,dk:dk,alpha:0,
+        delay:0.5+rng()*2.0,shape:-1,isGeo:false});
+    }
+  }}
+  return dots;
+}
+
+/* 3D 스택 구축 (래퍼런스3 스타일) — 텍스트 아래 배치 */
+function _buildStack(vw,vh,rng){
+  var cx=vw/2,baseY=vh*0.55+80;
   var dots=[];
-  /* 0: 구 (바닥) — 안정적 기반 */
   dots=dots.concat(_gSphere(cx,baseY-58,58,480,rng,0, 0,0,0));
-  /* 1: 역삼각뿔 — 구 위에 거꾸로 밸런스 */
   dots=dots.concat(_gCone(cx+4,baseY-148,34,52,270,rng,1, Math.PI+0.1,0.12,0));
-  /* 2: 납작 디스크 — 삼각뿔 위 */
   dots=dots.concat(_gCyl(cx-2,baseY-192,30,10,170,rng,2, 0.08,0,0.05));
-  /* 3: 실린더 — 기울어져서 */
   dots=dots.concat(_gCyl(cx+7,baseY-238,16,46,250,rng,3, 0.35,0,-0.2));
-  /* 4: 큐브 — 작고 기울어진 최상단 */
   dots=dots.concat(_gCube(cx-4,baseY-282,25,200,rng,4, 0.3,0.45,0.15));
   return dots;
 }
 
-/* 벤다이어그램 목표 위치 — shape 0,1,2 → left / 3,4 → right */
+/* 벤다이어그램 타겟 (모든 도트에 적용) */
 function _buildVennTargets(vw,vh,dots){
   var cx=vw/2,cy=vh/2-20,rng=_iRng(55),r=100;
   for(var i=0;i<dots.length;i++){
     var a=rng()*6.2832,d=Math.sqrt(rng())*r;
+    /* 텍스트 도트 + shape 0,1,2 → 좌 / shape 3,4 → 우 */
     if(dots[i].shape<=2){
       dots[i].vx2=cx-90+Math.cos(a)*d;
       dots[i].vy2=cy+Math.sin(a)*d;
@@ -3348,8 +3376,9 @@ function _buildVennTargets(vw,vh,dots){
   }
 }
 
-function startInterpCanvas(){
-  var canvas=document.getElementById('interpretCanvas');if(!canvas)return;
+/* === dotTextCanvas에서 interpret 시작 === */
+function drawInterpDots(lang){
+  var canvas=document.getElementById('dotTextCanvas');if(!canvas)return;
   _interpSys.canvas=canvas;
   var vw=window.innerWidth,vh=window.innerHeight;
   var dpr=Math.min(window.devicePixelRatio||1,2);
@@ -3357,22 +3386,28 @@ function startInterpCanvas(){
   canvas.style.width=vw+'px';canvas.style.height=vh+'px';
   _interpSys.ctx=canvas.getContext('2d');
   _interpSys.vw=vw;_interpSys.vh=vh;_interpSys.dpr=dpr;
-  _interpSys.dots=_buildStack(vw,vh);
-  _buildVennTargets(vw,vh,_interpSys.dots);
-  _interpSys.state='idle';
-  _interpSys.t0=performance.now()/1000;
-  _interpSys.stateT=_interpSys.t0;
-  _interpSys.analyzeProgress=0;
-  canvas.classList.add('interactive');
-  if(_interpSys.rafId)cancelAnimationFrame(_interpSys.rafId);
-  (function loop(){
-    if(_interpSys.state==='off')return;
-    _interpSys.rafId=requestAnimationFrame(loop);
-    _interpFrame();
-  })();
+  document.fonts.ready.then(function(){
+    var rng=_iRng(42);
+    /* 텍스트 도트 + 3D 형태 도트 통합 */
+    var textDots=_sampleTextDots(lang,vw,vh,rng);
+    var shapeDots=_buildStack(vw,vh,rng);
+    _interpSys.dots=textDots.concat(shapeDots);
+    _buildVennTargets(vw,vh,_interpSys.dots);
+    _interpSys.state='idle';
+    _interpSys.t0=performance.now()/1000;
+    _interpSys.stateT=_interpSys.t0;
+    _interpSys.analyzeProgress=0;
+    canvas.classList.add('interactive');
+    if(_interpSys.rafId)cancelAnimationFrame(_interpSys.rafId);
+    (function loop(){
+      if(_interpSys.state==='off')return;
+      _interpSys.rafId=requestAnimationFrame(loop);
+      _interpFrame();
+    })();
+  });
 }
 
-function stopInterpCanvas(){
+function stopInterpDots(){
   _interpSys.state='off';
   if(_interpSys.rafId){cancelAnimationFrame(_interpSys.rafId);_interpSys.rafId=null}
   var c=_interpSys.canvas;
@@ -3381,7 +3416,7 @@ function stopInterpCanvas(){
   }
 }
 
-/* 마우스 추적 — interpretCanvas용 */
+/* 마우스 추적 */
 window.addEventListener('mousemove',function(e){
   _interpSys.mx=e.clientX;_interpSys.my=e.clientY;
 });
@@ -3393,7 +3428,8 @@ function _interpFrame(){
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,vw,vh);
   var isDark=document.body.classList.contains('dark-mode');
-  var cr=isDark?210:25;
+  var cr=isDark?210:20;
+  var maxA=isDark?0.95:0.88;
   var now=performance.now()/1000;
   var elapsed=now-s.t0;
   var stateAge=now-s.stateT;
@@ -3403,17 +3439,17 @@ function _interpFrame(){
   if(s.state==='analyzing')s.analyzeProgress=Math.min(stateAge/4.0,0.85);
   if(s.state==='result')s.analyzeProgress+=(1.0-s.analyzeProgress)*0.03;
 
-  var pushR=90,pushF=4.5;
-  var spring=isVenn?0.06:0.035;
-  var damp=0.88;
+  /* dotText와 동일한 물리 */
+  var pushRadius=80,pushForce=5;
 
-  /* 도트 물리 업데이트 */
   for(var i=0;i<dots.length;i++){
     var p=dots[i];
     var age=elapsed-p.delay;
     if(age<0)continue;
-    p.alpha=age<1.5?age/1.5:1.0;
+    var fadeIn=age<1.5?age/1.5:1.0;
+    p.alpha=fadeIn;
 
+    /* 목표 위치 */
     var tx,ty;
     if(isVenn){
       var ov=s.analyzeProgress*130;
@@ -3425,129 +3461,88 @@ function _interpFrame(){
       tx=p.hx+fx;ty=p.hy+fy;
     }
 
-    var dx=p.x-mx,dy=p.y-my,dist=Math.sqrt(dx*dx+dy*dy);
-    if(dist<pushR&&dist>0.1&&p.alpha>0.5){
-      var f=pushF*(1-dist/pushR)*p.alpha;
-      p.vx+=dx/dist*f;p.vy+=dy/dist*f;
+    /* 스프링 (dotText와 동일) */
+    var spr=0.015+fadeIn*fadeIn*0.045;
+    var dmp=0.86;
+
+    /* 마우스 반발 */
+    if(fadeIn>0.7){
+      var dx=p.x-mx,dy=p.y-my;
+      var dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<pushRadius&&dist>0.1){
+        var f=pushForce*(1-dist/pushRadius)*fadeIn;
+        p.vx+=dx/dist*f;p.vy+=dy/dist*f;
+      }
     }
 
-    p.vx+=(tx-p.x)*spring*p.alpha;
-    p.vy+=(ty-p.y)*spring*p.alpha;
-    p.vx*=damp;p.vy*=damp;
+    p.vx+=(tx-p.x)*spr;
+    p.vy+=(ty-p.y)*spr;
+    p.vx*=dmp;p.vy*=dmp;
     p.x+=p.vx;p.y+=p.vy;
   }
 
-  /* idle: 바닥 그림자 + 바우하우스 타이포 */
+  /* idle: 바닥 그림자 */
   if(!isVenn){
-    var baseY=vh/2+110;
-    /* 구 아래 바닥 그림자 — 타원형 그라디언트 */
+    var baseY=vh*0.55+80;
     var grad=ctx.createRadialGradient(vw/2,baseY+6,0,vw/2,baseY+6,75);
-    grad.addColorStop(0,isDark?'rgba(0,0,0,0.18)':'rgba(0,0,0,0.09)');
+    grad.addColorStop(0,isDark?'rgba(0,0,0,0.15)':'rgba(0,0,0,0.07)');
     grad.addColorStop(1,'rgba(0,0,0,0)');
     ctx.fillStyle=grad;
     ctx.save();ctx.scale(1,0.25);
     ctx.beginPath();ctx.arc(vw/2,(baseY+6)/0.25,75,0,6.2832);ctx.fill();
     ctx.restore();
-
-    /* 형태 사이 접촉 그림자 */
-    var contacts=[
-      {y:baseY-116,rx:22},{y:baseY-170,rx:18},
-      {y:baseY-214,rx:14},{y:baseY-258,rx:12}
-    ];
-    for(var ci=0;ci<contacts.length;ci++){
-      var cc=contacts[ci];
-      var cg=ctx.createRadialGradient(vw/2,cc.y,0,vw/2,cc.y,cc.rx);
-      cg.addColorStop(0,isDark?'rgba(0,0,0,0.08)':'rgba(0,0,0,0.04)');
-      cg.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=cg;
-      ctx.save();ctx.scale(1,0.35);
-      ctx.beginPath();ctx.arc(vw/2,cc.y/0.35,cc.rx,0,6.2832);ctx.fill();
-      ctx.restore();
-    }
-
-    /* Bauhaus 타이포그래피 — "INTER" / "PRET" 분리 배치 */
-    var ta=Math.min(elapsed*0.3,1);
-    ctx.save();
-    ctx.globalAlpha=ta;
-
-    /* 대형 텍스트: INTER (좌), PRET (우) */
-    ctx.font='700 52px "Helvetica Neue",Pretendard,sans-serif';
-    ctx.fillStyle=isDark?'rgba(210,210,210,0.035)':'rgba(25,25,25,0.035)';
-    ctx.textAlign='right';
-    ctx.fillText('INTER',vw/2-78,vh/2-10);
-    ctx.textAlign='left';
-    ctx.fillText('PRET',vw/2+78,vh/2+50);
-
-    /* 소형 악센트 텍스트 */
-    ctx.font='500 13px "Helvetica Neue",Pretendard,sans-serif';
-    ctx.fillStyle=isDark?'rgba(210,210,210,0.07)':'rgba(25,25,25,0.055)';
-    ctx.textAlign='right';
-    ctx.fillText('본질',vw/2-84,vh/2+80);
-    ctx.textAlign='left';
-    ctx.fillText('해석',vw/2+84,vh/2-120);
-
-    /* 세로 악센트 라인 */
-    ctx.strokeStyle=isDark?'rgba(210,210,210,0.05)':'rgba(25,25,25,0.035)';
-    ctx.lineWidth=0.5;
-    ctx.beginPath();
-    ctx.moveTo(vw/2-100,vh/2-170);ctx.lineTo(vw/2-100,vh/2+100);
-    ctx.stroke();
-
-    ctx.globalAlpha=1;
-    ctx.restore();
   }
 
-  /* analyzing/result: 벤다이어그램 */
+  /* analyzing/result: 벤다이어그램 윤곽 */
   if(isVenn){
     var vcx=vw/2,vcy=vh/2-20,vr=100;
     var ov=s.analyzeProgress*130;
-    ctx.strokeStyle=isDark?'rgba(210,210,210,0.1)':'rgba(25,25,25,0.06)';
+    ctx.strokeStyle=isDark?'rgba(210,210,210,0.1)':'rgba(20,20,20,0.06)';
     ctx.lineWidth=0.8;
     ctx.beginPath();ctx.arc(vcx-90+ov*0.5,vcy,vr,0,6.2832);ctx.stroke();
     ctx.beginPath();ctx.arc(vcx+90-ov*0.5,vcy,vr,0,6.2832);ctx.stroke();
 
-    /* 교차 영역 펄스 */
     if(s.analyzeProgress>0.3){
       var pulse=0.025+Math.sin(now*2.5)*0.015;
       var oa=Math.min((s.analyzeProgress-0.3)*1.5,1)*pulse;
-      ctx.fillStyle=isDark?'rgba(210,210,210,'+oa.toFixed(3)+')':'rgba(25,25,25,'+oa.toFixed(3)+')';
+      ctx.fillStyle=isDark?'rgba(210,210,210,'+oa.toFixed(3)+')':'rgba(20,20,20,'+oa.toFixed(3)+')';
       var icx=(vcx-90+ov*0.5+vcx+90-ov*0.5)/2;
       ctx.beginPath();ctx.arc(icx,vcy,vr*0.45,0,6.2832);ctx.fill();
     }
 
-    /* 라벨 */
     ctx.font='500 13px "Helvetica Neue",Pretendard,sans-serif';
     ctx.textAlign='center';
-    ctx.fillStyle=isDark?'rgba(210,210,210,0.45)':'rgba(25,25,25,0.35)';
+    ctx.fillStyle=isDark?'rgba(210,210,210,0.45)':'rgba(20,20,20,0.35)';
     ctx.fillText('당신의 본질',vcx-90+ov*0.5,vcy+vr+22);
     if(s.field)ctx.fillText(s.field+'의 본질',vcx+90-ov*0.5,vcy+vr+22);
     if(s.state==='result'&&s.analyzeProgress>0.9){
       ctx.font='600 12px "Helvetica Neue",Pretendard,sans-serif';
-      ctx.fillStyle=isDark?'rgba(210,210,210,0.65)':'rgba(25,25,25,0.55)';
+      ctx.fillStyle=isDark?'rgba(210,210,210,0.65)':'rgba(20,20,20,0.55)';
       ctx.fillText('교차점',(vcx-90+ov*0.5+vcx+90-ov*0.5)/2,vcy-4);
     }
   }
 
-  /* 스티플 도트 렌더링 */
+  /* 도트 렌더링 — dotText와 완전 동일한 스타일 */
   for(var i=0;i<dots.length;i++){
     var p=dots[i];
     if(p.alpha<0.02)continue;
-    var a=p.shade*p.alpha;
-    var dr=p.dotR;
-    /* 교차 영역 강조 (Venn result) */
+    var r=0.55+p.dk*0.25;
+    var a=maxA*(0.6+p.dk*0.4)*p.alpha;
+    /* 벤 교차영역 강조 */
     if(isVenn&&s.analyzeProgress>0.5){
       var vcx2=vw/2,ov2=s.analyzeProgress*130;
       var lx=vcx2-90+ov2*0.5,rx=vcx2+90-ov2*0.5;
       if(p.x>lx-15&&p.x<rx+15&&Math.abs(p.y-(vh/2-20))<100){
-        a=Math.min(a*2,0.92);dr*=1.2;
+        a=Math.min(a*1.8,0.92);r*=1.15;
       }
     }
+    if(a<0.02)continue;
     ctx.fillStyle='rgba('+cr+','+cr+','+cr+','+a.toFixed(3)+')';
-    ctx.beginPath();ctx.arc(p.x,p.y,dr,0,6.2832);ctx.fill();
+    ctx.beginPath();ctx.arc(p.x,p.y,r,0,6.2832);ctx.fill();
   }
 }
 
-/* Interpret 상태 전환 함수 */
+/* Interpret 상태 전환 */
 function interpSetAnalyzing(field){
   _interpSys.field=field;
   _interpSys.state='analyzing';

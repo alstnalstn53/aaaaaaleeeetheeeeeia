@@ -3737,10 +3737,18 @@ window._alScene={scene:scene,pts:pts,c1:cg.children[0],c2:cg.children[1],createP
         if(t<1)self._transRafId=requestAnimationFrame(ramp);
       })();
     }else if(mode==='unmask'){
-      /* 비모핑 → unmask: 텍스쳐 교체, chat progress가 morphLevel 관리 */
+      /* 비모핑 → unmask: 텍스쳐 교체, 초기 morphLevel 0.3으로 서서히 등장 */
       simMat.uniforms.uSilTargets.value=targetTex;
       renderUniforms.uSilTargets.value=targetTex;
       this.unmaskMode=true;
+      this.morphLevel=0;
+      var rStart=performance.now(),rDur=2400;
+      (function ramp(){
+        if(self._targetMode!==mode)return;
+        var t=Math.min((performance.now()-rStart)/rDur,1);
+        self.morphLevel=0.3*(1-Math.pow(1-t,3));
+        if(t<1)self._transRafId=requestAnimationFrame(ramp);
+      })();
     }else{
       /* core/about */
       this.unmaskMode=false;

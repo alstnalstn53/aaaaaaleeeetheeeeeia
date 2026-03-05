@@ -3695,16 +3695,15 @@ window._alScene={scene:scene,pts:pts,c1:cg.children[0],c2:cg.children[1],createP
           simMat.uniforms.uSilTargets.value=targetTex;
           renderUniforms.uSilTargets.value=targetTex;
           self.unmaskMode=true;
-          if(mode==='interpret'){
-            var rStart=performance.now(),rDur=2800;
-            (function reform(){
-              if(self._targetMode!==mode)return;
-              var t2=Math.min((performance.now()-rStart)/rDur,1);
-              self.morphLevel=1-Math.pow(1-t2,3);
-              if(t2<1)self._transRafId=requestAnimationFrame(reform);
-            })();
-          }
-          /* unmask: morphLevel=0, chat progress가 자연스럽게 올림 */
+          var rTarget=mode==='interpret'?1.0:0.35;
+          var rDur=mode==='interpret'?2800:2000;
+          var rStart=performance.now();
+          (function reform(){
+            if(self._targetMode!==mode)return;
+            var t2=Math.min((performance.now()-rStart)/rDur,1);
+            self.morphLevel=rTarget*(1-Math.pow(1-t2,3));
+            if(t2<1)self._transRafId=requestAnimationFrame(reform);
+          })();
         }else{
           self._transRafId=requestAnimationFrame(dissolve);
         }

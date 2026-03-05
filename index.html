@@ -3365,11 +3365,11 @@ if(edGenBtn)edGenBtn.addEventListener('click',generateEssenceDocument);
 /* ===== Dot-text Canvas2D v6 — fullscreen, fine dots, no frame ===== */
 var _DOT_TEXT={
   ko:{t1:'당신보다',t2:'당신을 잘 아는 지도.',s1:'Core에서 추출된 데이터 — 가치관, 패턴, 회피하는 것.',s2:'이 모든 것이 하나의 프로필로 합성됩니다.',
-    tf:'700 54px Pretendard,"Helvetica Neue",sans-serif',sf:'300 18px Pretendard,"Helvetica Neue",sans-serif'},
+    tf:'700 54px Pretendard,"Helvetica Neue",sans-serif',sf:'500 24px Pretendard,"Helvetica Neue",sans-serif'},
   en:{t1:'A map that knows you',t2:'better than you.',s1:'Data extracted from Core \u2014 values, patterns, avoidance.',s2:'All synthesized into a single profile.',
-    tf:'700 56px "Helvetica Neue",Inter,Arial,sans-serif',sf:'300 20px "Helvetica Neue",Inter,Arial,sans-serif'},
+    tf:'700 56px "Helvetica Neue",Inter,Arial,sans-serif',sf:'500 24px "Helvetica Neue",Inter,Arial,sans-serif'},
   es:{t1:'Un mapa que te conoce',t2:'mejor que tú.',s1:'Datos extraídos de Core \u2014 valores, patrones, evasión.',s2:'Todo sintetizado en un solo perfil.',
-    tf:'700 48px "Helvetica Neue",Inter,Arial,sans-serif',sf:'300 18px "Helvetica Neue",Inter,Arial,sans-serif'}
+    tf:'700 48px "Helvetica Neue",Inter,Arial,sans-serif',sf:'500 22px "Helvetica Neue",Inter,Arial,sans-serif'}
 };
 (function(){var el=document.createElement('span');el.textContent='당신보다 당신을 잘 아는 지도';el.style.cssText='font-family:Pretendard;font-weight:700;position:absolute;left:-9999px;top:-9999px;visibility:hidden;font-size:54px';document.body.appendChild(el)})();
 
@@ -3415,7 +3415,7 @@ function _buildScatterDots(lang){
   ox.fillStyle='#fff';ox.fillRect(0,0,TW,TH);
   ox.fillStyle='#000';ox.textAlign='center';
   ox.font=tx.tf;ox.fillText(tx.t1,TW/2,58);ox.fillText(tx.t2,TW/2,120);
-  ox.font=tx.sf;ox.fillText(tx.s1,TW/2,168);ox.fillText(tx.s2,TW/2,194);
+  ox.font=tx.sf;ox.fillText(tx.s1,TW/2,172);ox.fillText(tx.s2,TW/2,202);
   var imgD=ox.getImageData(0,0,TW*S,TH*S).data;
   var oW=TW*S;
   /* 화면 중앙 기준 텍스트 오프셋 (손 위쪽) */

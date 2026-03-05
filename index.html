@@ -1941,7 +1941,11 @@ function switchPage(page){
   if(page==='unmask'){
     if(window._alScene)window._alScene.unmaskMode=true;
     var _dtc=document.getElementById('dotTextCanvas');
-    if(_dtc){if(typeof drawDotText==='function')drawDotText(currentLang);_dtc.classList.add('visible')}
+    if(_dtc){
+      if(typeof drawDotText==='function')drawDotText(currentLang);
+      /* 손 먼저 등장 → 1.2초 후 글씨 페이드인 */
+      setTimeout(function(){_dtc.classList.add('visible')},1200);
+    }
   }else{
     if(window._alScene)window._alScene.unmaskMode=false;
     var _dtc2=document.getElementById('dotTextCanvas');if(_dtc2)_dtc2.classList.remove('visible');
@@ -3396,20 +3400,20 @@ function _renderDots(canvas,tx){
   var oW=W*S;
   /* 점 수집: 위치 + darkness 값 */
   var dots=[];
-  var sp=3.0,rng=_dotRng(42);
+  var sp=2.2,rng=_dotRng(42);
   for(var y=0;y<H;y+=sp){for(var x=0;x<W;x+=sp){
     var sx=Math.floor(x*S),sy=Math.floor(y*S);
     var i=(sy*oW+sx)*4;
     var dk=1-(imgD[i]+imgD[i+1]+imgD[i+2])/(3*255);
-    if(dk>0.35){
-      /* jitter: ±1px 랜덤 오프셋으로 그리드 패턴 깨기 */
-      var jx=x+(rng()-0.5)*2.0;
-      var jy=y+(rng()-0.5)*2.0;
+    if(dk>0.3){
+      /* jitter: ±0.8px 랜덤 오프셋으로 그리드 패턴 깨기 */
+      var jx=x+(rng()-0.5)*1.6;
+      var jy=y+(rng()-0.5)*1.6;
       dots.push({x:jx,y:jy,dk:dk});
     }
   }}
   /* 점 그리기: darkness에 따라 크기/투명도 변화 */
-  var baseR=0.75,baseA=isDark?0.85:0.7;
+  var baseR=0.85,baseA=isDark?0.9:0.75;
   var cr=isDark?220:30,cg=isDark?220:30,cb=isDark?220:30;
   for(var d=0;d<dots.length;d++){
     var p=dots[d];

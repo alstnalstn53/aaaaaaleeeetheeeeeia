@@ -1781,9 +1781,9 @@ function switchPage(page){
   if(page==='unmask'){
     if(window._alScene)window._alScene.transitionTo('unmask');
     if(typeof stopInterpDots==='function')stopInterpDots();
-    /* unmask 텍스트: 모핑 상태에서 왔으면 dissolve(2.8s)+reform 시작 후 표시 */
+    /* unmask 텍스트: 모핑 상태에서 왔으면 전환(5s) 중 형태 잡힌 후 표시 */
     if(wasMorphed){
-      setTimeout(function(){if(typeof drawDotText==='function')drawDotText(currentLang)},3500);
+      setTimeout(function(){if(typeof drawDotText==='function')drawDotText(currentLang)},3200);
     }else{
       if(typeof drawDotText==='function')drawDotText(currentLang);
     }
@@ -1792,7 +1792,7 @@ function switchPage(page){
     if(typeof stopDotText==='function')stopDotText();
     if(typeof stopInterpDots==='function')stopInterpDots();
     /* 도형 먼저 → 텍스트 나중. 모핑에서 왔으면 dissolve+reform 후 */
-    var textDelay=wasMorphed?5200:2800;
+    var textDelay=wasMorphed?4200:2800;
     window._interpTextTimer=setTimeout(function(){
       if(typeof drawInterpDots==='function')drawInterpDots(currentLang);
     },textDelay);
@@ -3684,33 +3684,36 @@ window._alScene={scene:scene,pts:pts,c1:cg.children[0],c2:cg.children[1],createP
 
     if(wasMorphed&&needsMorph){
       /* 모핑 상태 → 모핑 상태 (unmask↔interpret)
-         느긋하게: 흩어짐(2.8s) → 텍스쳐 교체 → 재구성(3.2s)
-         ease-in-out로 자연스러운 호흡 */
+         morphLevel을 0까지 내리면 homeForce가 중심으로 끌어당김.
+         대신 0.2까지만 낮춰서 파티클이 느슨해진 상태에서
+         텍스쳐를 교체 → 새 타겟으로 서서히 재구성.
+         전체 5초, dip 지점 40% (2초) */
       var startML=this.morphLevel;
-      var dStart=performance.now(),dDur=2800;
-      (function dissolve(){
+      var dipTo=0.18;
+      var totalDur=5000;
+      var dipPoint=0.40;
+      var dStart=performance.now();
+      var swapped=false;
+      (function transition(){
         if(self._targetMode!==mode)return;
-        var t=Math.min((performance.now()-dStart)/dDur,1);
-        /* ease-in-out: 천천히 시작, 중간 가속, 끝에서 천천히 → 0 */
-        var e=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
-        self.morphLevel=startML*(1-e);
-        if(t>=1){
-          self.morphLevel=0;
-          simMat.uniforms.uSilTargets.value=targetTex;
-          renderUniforms.uSilTargets.value=targetTex;
-          self.unmaskMode=true;
-          var rDur=3200;
-          var rStart=performance.now();
-          (function reform(){
-            if(self._targetMode!==mode)return;
-            var t2=Math.min((performance.now()-rStart)/rDur,1);
-            /* ease-out: 빠르게 잡히고 끝에서 안착 */
-            self.morphLevel=1-Math.pow(1-t2,3);
-            if(t2<1)self._transRafId=requestAnimationFrame(reform);
-          })();
+        var t=Math.min((performance.now()-dStart)/totalDur,1);
+        if(t<dipPoint){
+          /* Phase 1: startML → dipTo (느슨하게 풀기) */
+          var p=t/dipPoint;
+          var e=p<0.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+          self.morphLevel=startML-(startML-dipTo)*e;
         }else{
-          self._transRafId=requestAnimationFrame(dissolve);
+          /* Phase 2: dipTo → 1.0 (새 형태로 구성) */
+          if(!swapped){
+            swapped=true;
+            simMat.uniforms.uSilTargets.value=targetTex;
+            renderUniforms.uSilTargets.value=targetTex;
+          }
+          var p=(t-dipPoint)/(1-dipPoint);
+          var e=1-Math.pow(1-p,3);
+          self.morphLevel=dipTo+(1.0-dipTo)*e;
         }
+        if(t<1)self._transRafId=requestAnimationFrame(transition);
       })();
     }else if(wasMorphed&&!needsMorph){
       /* 모핑 상태 → core/about: 서서히 흩어짐 */

@@ -1942,9 +1942,9 @@ function switchPage(page){
     if(window._alScene)window._alScene.unmaskMode=true;
     var _dtc=document.getElementById('dotTextCanvas');
     if(_dtc){
+      /* 점들이 흩어진 상태에서 모이므로 바로 보여줌 — 자연스러운 등장 */
+      _dtc.classList.add('visible');
       if(typeof drawDotText==='function')drawDotText(currentLang);
-      /* 손 먼저 등장 → 1.2초 후 글씨 페이드인 */
-      setTimeout(function(){_dtc.classList.add('visible')},1200);
     }
   }else{
     if(window._alScene)window._alScene.unmaskMode=false;
@@ -3416,15 +3416,20 @@ function _buildDots(canvas,tx){
   ox.font=tx.sf;ox.fillText(tx.s1,W/2,175);ox.fillText(tx.s2,W/2,200);
   var imgD=ox.getImageData(0,0,W*S,H*S).data;
   var oW=W*S;
-  var dots=[],sp=2.2,rng=_dotRng(42);
+  var dots=[],sp=2.0,rng=_dotRng(42);
   for(var y=0;y<H;y+=sp){for(var x=0;x<W;x+=sp){
     var sx=Math.floor(x*S),sy=Math.floor(y*S);
     var i=(sy*oW+sx)*4;
     var dk=1-(imgD[i]+imgD[i+1]+imgD[i+2])/(3*255);
-    if(dk>0.3){
-      var jx=x+(rng()-0.5)*1.6;
-      var jy=y+(rng()-0.5)*1.6;
-      dots.push({hx:jx,hy:jy,x:jx,y:jy,vx:0,vy:0,dk:dk});
+    if(dk>0.25){
+      var jx=x+(rng()-0.5)*1.4;
+      var jy=y+(rng()-0.5)*1.4;
+      /* 시작 위치: 캔버스 중앙에서 랜덤 반경으로 흩어진 상태 */
+      var ang=rng()*6.2832;
+      var rad=80+rng()*200;
+      var sx0=W/2+Math.cos(ang)*rad;
+      var sy0=H/2+Math.sin(ang)*rad;
+      dots.push({hx:jx,hy:jy,x:sx0,y:sy0,vx:0,vy:0,dk:dk});
     }
   }}
   _dotSys.dots=dots;
@@ -3452,10 +3457,10 @@ function _drawFrame(){
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,W,H);
   var isDark=document.body.classList.contains('dark-mode');
-  var cr=isDark?220:30,baseA=isDark?0.9:0.75;
+  var cr=isDark?220:30,baseA=isDark?0.92:0.8;
   var mx=s.mx,my=s.my;
-  var pushRadius=60,pushForce=8;
-  var spring=0.08,damp=0.85;
+  var pushRadius=70,pushForce=6;
+  var spring=0.045,damp=0.88;
 
   for(var i=0;i<dots.length;i++){
     var p=dots[i];
@@ -3474,9 +3479,9 @@ function _drawFrame(){
     p.vx*=damp;p.vy*=damp;
     /* 위치 업데이트 */
     p.x+=p.vx;p.y+=p.vy;
-    /* 그리기 */
-    var r=0.85*(0.6+p.dk*0.5);
-    var a=baseA*(0.5+p.dk*0.5);
+    /* 그리기 — 점 크기 업 */
+    var r=1.0*(0.6+p.dk*0.5);
+    var a=baseA*(0.55+p.dk*0.45);
     ctx.fillStyle='rgba('+cr+','+cr+','+cr+','+a.toFixed(2)+')';
     ctx.beginPath();ctx.arc(p.x,p.y,r,0,6.2832);ctx.fill();
   }

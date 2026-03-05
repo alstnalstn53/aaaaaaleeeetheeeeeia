@@ -405,8 +405,7 @@ body.dark-mode .urp-kw-ko{color:#e8e8e8}
 body.dark-mode .urp-empty{color:#555}
 
 .svc-page{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;position:relative;background:transparent}
-#dotTextCanvas{position:fixed;top:50%;left:50%;transform:translate(-50%,-58%);z-index:1;opacity:0;transition:opacity 0.6s ease;background:transparent;border:none;outline:none}
-#dotTextCanvas.visible{opacity:1}
+#dotTextCanvas{position:fixed;top:50%;left:50%;transform:translate(-50%,-58%);z-index:1;background:transparent;border:none;outline:none}
 .svc-intro{text-align:center;max-width:560px;padding:0 30px}
 .svc-intro-num{font-size:11px;font-weight:600;color:#bbb;letter-spacing:0.15em;margin-bottom:16px}
 .svc-intro-title{font-size:clamp(28px,3.5vw,48px);font-weight:400;letter-spacing:-0.02em;margin-bottom:16px;color:#111}
@@ -1942,13 +1941,10 @@ function switchPage(page){
     if(window._alScene)window._alScene.unmaskMode=true;
     var _dtc=document.getElementById('dotTextCanvas');
     if(_dtc){
-      /* 점들이 흩어진 상태에서 모이므로 바로 보여줌 — 자연스러운 등장 */
-      _dtc.classList.add('visible');
       if(typeof drawDotText==='function')drawDotText(currentLang);
     }
   }else{
     if(window._alScene)window._alScene.unmaskMode=false;
-    var _dtc2=document.getElementById('dotTextCanvas');if(_dtc2)_dtc2.classList.remove('visible');
     if(typeof stopDotText==='function')stopDotText();
   }
   /* 등장 모션 */
@@ -3365,7 +3361,7 @@ if(edGenBtn)edGenBtn.addEventListener('click',generateEssenceDocument);
 })();
 </script>
 <script>
-/* ===== Dot-text Canvas2D v4 — interactive mouse-reactive dots ===== */
+/* ===== Dot-text Canvas2D v5 — particles gather into text ===== */
 var _DOT_TEXT={
   ko:{t1:'당신보다',t2:'당신을 잘 아는 지도.',s1:'Core에서 추출된 데이터 — 가치관, 패턴, 회피하는 것.',s2:'이 모든 것이 하나의 프로필로 합성됩니다.',
     tf:'600 52px Pretendard,"Helvetica Neue",sans-serif',sf:'300 18px Pretendard,"Helvetica Neue",sans-serif'},
@@ -3378,10 +3374,10 @@ var _DOT_TEXT={
 
 var _dotSys={
   dots:[],canvas:null,ctx:null,W:660,H:230,dpr:1,
-  mx:-9999,my:-9999,active:false,rafId:null
+  mx:-9999,my:-9999,active:false,rafId:null,
+  t0:0,gathered:false,shown:false
 };
 
-/* 마우스 위치 → 캔버스 로컬 좌표 변환 */
 window.addEventListener('mousemove',function(e){
   if(!_dotSys.canvas)return;
   var r=_dotSys.canvas.getBoundingClientRect();
@@ -3392,22 +3388,11 @@ window.addEventListener('mouseleave',function(){_dotSys.mx=-9999;_dotSys.my=-999
 
 function _dotRng(s){return function(){s=(s*16807+0)%2147483647;return(s&0x7fffffff)/2147483647}}
 
-function drawDotText(lang){
-  var canvas=document.getElementById('dotTextCanvas');if(!canvas)return;
-  _dotSys.canvas=canvas;
+/* 텍스트 목표 위치 미리 계산 (폰트 로드 후) */
+var _dotTargets=null;
+function _preBuildTargets(lang){
   var tx=_DOT_TEXT[lang]||_DOT_TEXT['en'];
-  document.fonts.ready.then(function(){_buildDots(canvas,tx);_startDotLoop()});
-}
-
-function _buildDots(canvas,tx){
-  var W=_dotSys.W,H=_dotSys.H;
-  var dpr=Math.min(window.devicePixelRatio||1,2);
-  _dotSys.dpr=dpr;
-  canvas.width=W*dpr;canvas.height=H*dpr;
-  canvas.style.width=W+'px';canvas.style.height=H+'px';
-  _dotSys.ctx=canvas.getContext('2d');
-  /* 고해상도 오프스크린 텍스트 렌더 */
-  var S=3;
+  var W=_dotSys.W,H=_dotSys.H,S=3;
   var off=document.createElement('canvas');off.width=W*S;off.height=H*S;
   var ox=off.getContext('2d');ox.scale(S,S);
   ox.fillStyle='#fff';ox.fillRect(0,0,W,H);
@@ -3416,30 +3401,63 @@ function _buildDots(canvas,tx){
   ox.font=tx.sf;ox.fillText(tx.s1,W/2,175);ox.fillText(tx.s2,W/2,200);
   var imgD=ox.getImageData(0,0,W*S,H*S).data;
   var oW=W*S;
-  var dots=[],sp=2.0,rng=_dotRng(42);
+  var targets=[],sp=2.0,rng=_dotRng(42);
   for(var y=0;y<H;y+=sp){for(var x=0;x<W;x+=sp){
     var sx=Math.floor(x*S),sy=Math.floor(y*S);
-    var i=(sy*oW+sx)*4;
-    var dk=1-(imgD[i]+imgD[i+1]+imgD[i+2])/(3*255);
+    var idx=(sy*oW+sx)*4;
+    var dk=1-(imgD[idx]+imgD[idx+1]+imgD[idx+2])/(3*255);
     if(dk>0.25){
       var jx=x+(rng()-0.5)*1.4;
       var jy=y+(rng()-0.5)*1.4;
-      /* 시작 위치: 캔버스 중앙에서 랜덤 반경으로 흩어진 상태 */
-      var ang=rng()*6.2832;
-      var rad=80+rng()*200;
-      var sx0=W/2+Math.cos(ang)*rad;
-      var sy0=H/2+Math.sin(ang)*rad;
-      dots.push({hx:jx,hy:jy,x:sx0,y:sy0,vx:0,vy:0,dk:dk});
+      /* delay: 중앙에서 가까울수록 먼저 도착 (0~1.5초 범위) */
+      var cx=jx-W/2,cy=jy-H/2;
+      var d=Math.sqrt(cx*cx+cy*cy);
+      var delay=0.3+(d/400)*1.2+rng()*0.3;
+      targets.push({hx:jx,hy:jy,dk:dk,delay:delay});
     }
   }}
-  _dotSys.dots=dots;
+  _dotTargets=targets;
+}
+
+function drawDotText(lang){
+  var canvas=document.getElementById('dotTextCanvas');if(!canvas)return;
+  _dotSys.canvas=canvas;
+  var dpr=Math.min(window.devicePixelRatio||1,2);
+  _dotSys.dpr=dpr;
+  canvas.width=_dotSys.W*dpr;canvas.height=_dotSys.H*dpr;
+  canvas.style.width=_dotSys.W+'px';canvas.style.height=_dotSys.H+'px';
+  _dotSys.ctx=canvas.getContext('2d');
+  document.fonts.ready.then(function(){
+    _preBuildTargets(lang);
+    /* 점들: 화면 밖 랜덤 위치에서 시작, alpha=0 */
+    var W=_dotSys.W,H=_dotSys.H,rng=_dotRng(99);
+    var dots=[];
+    for(var i=0;i<_dotTargets.length;i++){
+      var t=_dotTargets[i];
+      /* 시작: 캔버스 밖 넓은 영역에 흩어짐 */
+      var ang=rng()*6.2832;
+      var rad=300+rng()*250;
+      dots.push({
+        hx:t.hx,hy:t.hy,
+        x:W/2+Math.cos(ang)*rad,
+        y:H/2+Math.sin(ang)*rad,
+        vx:0,vy:0,dk:t.dk,
+        alpha:0,delay:t.delay
+      });
+    }
+    _dotSys.dots=dots;
+    _dotSys.t0=performance.now()/1000;
+    _dotSys.gathered=false;
+    _dotSys.shown=true;
+    _startDotLoop();
+  });
 }
 
 function _startDotLoop(){
   if(_dotSys.rafId)cancelAnimationFrame(_dotSys.rafId);
   _dotSys.active=true;
   function loop(){
-    if(!_dotSys.active){return}
+    if(!_dotSys.active)return;
     _dotSys.rafId=requestAnimationFrame(loop);
     _drawFrame();
   }
@@ -3447,7 +3465,12 @@ function _startDotLoop(){
 }
 function stopDotText(){
   _dotSys.active=false;
+  _dotSys.shown=false;
   if(_dotSys.rafId){cancelAnimationFrame(_dotSys.rafId);_dotSys.rafId=null}
+  if(_dotSys.ctx){
+    _dotSys.ctx.setTransform(_dotSys.dpr,0,0,_dotSys.dpr,0,0);
+    _dotSys.ctx.clearRect(0,0,_dotSys.W,_dotSys.H);
+  }
 }
 
 function _drawFrame(){
@@ -3457,38 +3480,53 @@ function _drawFrame(){
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,W,H);
   var isDark=document.body.classList.contains('dark-mode');
-  var cr=isDark?220:30,baseA=isDark?0.92:0.8;
+  var cr=isDark?220:30;
+  var maxA=isDark?0.92:0.8;
   var mx=s.mx,my=s.my;
   var pushRadius=70,pushForce=6;
-  var spring=0.045,damp=0.88;
+  var now=performance.now()/1000-s.t0;
 
   for(var i=0;i<dots.length;i++){
     var p=dots[i];
-    /* 마우스 반발력 */
-    var dx=p.x-mx,dy=p.y-my;
-    var dist=Math.sqrt(dx*dx+dy*dy);
-    if(dist<pushRadius&&dist>0.1){
-      var force=pushForce*(1-dist/pushRadius);
-      p.vx+=dx/dist*force;
-      p.vy+=dy/dist*force;
+    /* 시간 기반 등장: delay 이후 alpha 서서히 증가 */
+    var age=now-p.delay;
+    if(age<0){continue}/* 아직 등장 전 */
+    var fadeIn=age<1.0?age/1.0:1.0;
+    p.alpha=fadeIn;
+
+    /* 스프링: 느리게 시작 → 점점 강해짐 */
+    var springStr=0.02+fadeIn*0.04;
+    var dampVal=0.88;
+
+    /* 마우스 반발력 (모인 후에만) */
+    if(fadeIn>=1.0){
+      var dx=p.x-mx,dy=p.y-my;
+      var dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<pushRadius&&dist>0.1){
+        var force=pushForce*(1-dist/pushRadius);
+        p.vx+=dx/dist*force;
+        p.vy+=dy/dist*force;
+      }
     }
-    /* 홈 위치로 스프링 복원 */
-    p.vx+=(p.hx-p.x)*spring;
-    p.vy+=(p.hy-p.y)*spring;
-    /* 감쇠 */
-    p.vx*=damp;p.vy*=damp;
-    /* 위치 업데이트 */
+
+    /* 홈 위치로 스프링 */
+    p.vx+=(p.hx-p.x)*springStr;
+    p.vy+=(p.hy-p.y)*springStr;
+    p.vx*=dampVal;p.vy*=dampVal;
     p.x+=p.vx;p.y+=p.vy;
-    /* 그리기 — 점 크기 업 */
+
+    /* 그리기 */
     var r=1.0*(0.6+p.dk*0.5);
-    var a=baseA*(0.55+p.dk*0.45);
-    ctx.fillStyle='rgba('+cr+','+cr+','+cr+','+a.toFixed(2)+')';
+    var a=maxA*(0.55+p.dk*0.45)*p.alpha;
+    if(a<0.01)continue;
+    ctx.fillStyle='rgba('+cr+','+cr+','+cr+','+a.toFixed(3)+')';
     ctx.beginPath();ctx.arc(p.x,p.y,r,0,6.2832);ctx.fill();
   }
 }
 
+/* 폰트 프리로드만, 렌더는 unmask 진입 시 */
 document.fonts.ready.then(function(){
-  setTimeout(function(){drawDotText(typeof currentLang!=='undefined'?currentLang:'ko')},150);
+  if(_DOT_TEXT['ko'])_preBuildTargets(typeof currentLang!=='undefined'?currentLang:'ko');
 });
 
 (function(){

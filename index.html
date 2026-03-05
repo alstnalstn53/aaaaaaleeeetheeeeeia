@@ -3695,8 +3695,8 @@ window._alScene={scene:scene,pts:pts,c1:cg.children[0],c2:cg.children[1],createP
           simMat.uniforms.uSilTargets.value=targetTex;
           renderUniforms.uSilTargets.value=targetTex;
           self.unmaskMode=true;
-          var rTarget=mode==='interpret'?1.0:0.35;
-          var rDur=mode==='interpret'?2800:2000;
+          var rTarget=1.0;
+          var rDur=mode==='interpret'?2800:2400;
           var rStart=performance.now();
           (function reform(){
             if(self._targetMode!==mode)return;
@@ -3742,11 +3742,11 @@ window._alScene={scene:scene,pts:pts,c1:cg.children[0],c2:cg.children[1],createP
       renderUniforms.uSilTargets.value=targetTex;
       this.unmaskMode=true;
       this.morphLevel=0;
-      var rStart=performance.now(),rDur=2400;
+      var rStart=performance.now(),rDur=2800;
       (function ramp(){
         if(self._targetMode!==mode)return;
         var t=Math.min((performance.now()-rStart)/rDur,1);
-        self.morphLevel=0.3*(1-Math.pow(1-t,3));
+        self.morphLevel=1.0*(1-Math.pow(1-t,3));
         if(t<1)self._transRafId=requestAnimationFrame(ramp);
       })();
     }else{

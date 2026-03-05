@@ -1777,23 +1777,27 @@ function switchPage(page){
   /* interpret 입력바 토글 */
   document.getElementById('interpretBar').style.display=(page==='interpret')?'flex':'none';
   if(window._interpTextTimer){clearTimeout(window._interpTextTimer);window._interpTextTimer=null}
+  var wasMorphed=window._alScene&&window._alScene.unmaskMode&&window._alScene.morphLevel>0.08;
   if(page==='unmask'){
-    if(window._alScene){window._alScene.setInterpret(false);window._alScene.unmaskMode=true;}
-    if(typeof drawDotText==='function')drawDotText(currentLang);
+    if(window._alScene)window._alScene.transitionTo('unmask');
     if(typeof stopInterpDots==='function')stopInterpDots();
+    /* unmask 텍스트: 모핑 상태에서 왔으면 dissolve 후 표시 */
+    if(wasMorphed){
+      setTimeout(function(){if(typeof drawDotText==='function')drawDotText(currentLang)},1600);
+    }else{
+      if(typeof drawDotText==='function')drawDotText(currentLang);
+    }
   }else if(page==='interpret'){
-    /* unmask에서 오면 morphLevel 높은 상태 → 텍스트 빨리, about에서 오면 느리게 */
-    var fromMorph=window._alScene?window._alScene.morphLevel:0;
-    if(window._alScene)window._alScene.setInterpret(true);
+    if(window._alScene)window._alScene.transitionTo('interpret');
     if(typeof stopDotText==='function')stopDotText();
     if(typeof stopInterpDots==='function')stopInterpDots();
-    if(window._interpTextTimer)clearTimeout(window._interpTextTimer);
-    var textDelay=fromMorph>0.15?1200:2800;
+    /* 도형 먼저 → 텍스트 나중. 모핑에서 왔으면 dissolve+reform 후 */
+    var textDelay=wasMorphed?3800:2800;
     window._interpTextTimer=setTimeout(function(){
       if(typeof drawInterpDots==='function')drawInterpDots(currentLang);
     },textDelay);
   }else{
-    if(window._alScene){window._alScene.setInterpret(false);window._alScene.unmaskMode=false;}
+    if(window._alScene)window._alScene.transitionTo('core');
     if(typeof stopDotText==='function')stopDotText();
     if(typeof stopInterpDots==='function')stopInterpDots();
   }
@@ -3665,40 +3669,81 @@ var _c1Mat=new THREE.MeshBasicMaterial({color:_dk?0xffffff:0x000000,wireframe:tr
 var _c2Mat=new THREE.MeshBasicMaterial({color:_dk?0xaaaaaa:0x555555,wireframe:true,transparent:true,opacity:0,visible:false});
 cg.add(new THREE.Mesh(new THREE.IcosahedronGeometry(3.8,5),_c1Mat));cg.add(new THREE.Mesh(new THREE.IcosahedronGeometry(5,2),_c2Mat));
 function createPT(){}
-window._alScene={scene:scene,pts:pts,c1:cg.children[0],c2:cg.children[1],createPT:createPT,unmaskMode:false,morphLevel:1.0,_c1Mat:_c1Mat,_c2Mat:_c2Mat,
+window._alScene={scene:scene,pts:pts,c1:cg.children[0],c2:cg.children[1],createPT:createPT,unmaskMode:false,morphLevel:0,_c1Mat:_c1Mat,_c2Mat:_c2Mat,
   interpretMode:false,
-  _interpRafId:null,
-  setInterpret:function(on){
-    this.interpretMode=on;
-    if(this._interpRafId){cancelAnimationFrame(this._interpRafId);this._interpRafId=null}
-    if(on){
-      /* 텍스쳐 스왑 — unmask에서 오면 currentMorph가 이미 높으므로
-         파티클이 자연스럽게 손→도형으로 이동함 (흩어짐 없음) */
-      var tex=interpTargetTex;
-      simMat.uniforms.uSilTargets.value=tex;
-      renderUniforms.uSilTargets.value=tex;
+  _targetMode:'core',
+  _transRafId:null,
+  transitionTo:function(mode){
+    var self=this,prevMode=this._targetMode;
+    this._targetMode=mode;
+    this.interpretMode=(mode==='interpret');
+    if(this._transRafId){cancelAnimationFrame(this._transRafId);this._transRafId=null}
+    var targetTex=(mode==='interpret')?interpTargetTex:silTargetTex;
+    var needsMorph=(mode==='unmask'||mode==='interpret');
+    var wasMorphed=this.unmaskMode&&this.morphLevel>0.08;
+
+    if(wasMorphed&&needsMorph){
+      /* 모핑 상태 → 모핑 상태 (unmask↔interpret): 흩어짐→교체→재구성 */
+      var startML=this.morphLevel;
+      var dStart=performance.now(),dDur=1400;
+      (function dissolve(){
+        if(self._targetMode!==mode)return;
+        var t=Math.min((performance.now()-dStart)/dDur,1);
+        self.morphLevel=startML*Math.pow(1-t,2);
+        if(t>=1){
+          self.morphLevel=0;
+          simMat.uniforms.uSilTargets.value=targetTex;
+          renderUniforms.uSilTargets.value=targetTex;
+          self.unmaskMode=true;
+          if(mode==='interpret'){
+            var rStart=performance.now(),rDur=2800;
+            (function reform(){
+              if(self._targetMode!==mode)return;
+              var t2=Math.min((performance.now()-rStart)/rDur,1);
+              self.morphLevel=1-Math.pow(1-t2,3);
+              if(t2<1)self._transRafId=requestAnimationFrame(reform);
+            })();
+          }
+          /* unmask: morphLevel=0, chat progress가 자연스럽게 올림 */
+        }else{
+          self._transRafId=requestAnimationFrame(dissolve);
+        }
+      })();
+    }else if(wasMorphed&&!needsMorph){
+      /* 모핑 상태 → core/about: 서서히 흩어짐 */
+      var startML=this.morphLevel;
+      var dStart=performance.now(),dDur=1600;
+      (function fadeOut(){
+        if(self._targetMode!==mode)return;
+        var t=Math.min((performance.now()-dStart)/dDur,1);
+        self.morphLevel=startML*Math.pow(1-t,2);
+        if(t>=1){
+          self.morphLevel=0;self.unmaskMode=false;
+          simMat.uniforms.uSilTargets.value=targetTex;
+          renderUniforms.uSilTargets.value=targetTex;
+        }else{
+          self._transRafId=requestAnimationFrame(fadeOut);
+        }
+      })();
+    }else if(mode==='interpret'){
+      /* 비모핑 → interpret: 텍스쳐 교체 후 서서히 구성 */
+      simMat.uniforms.uSilTargets.value=targetTex;
+      renderUniforms.uSilTargets.value=targetTex;
+      this.unmaskMode=true;this.morphLevel=0;
+      var rStart=performance.now(),rDur=3200;
+      (function ramp(){
+        if(self._targetMode!==mode)return;
+        var t=Math.min((performance.now()-rStart)/rDur,1);
+        self.morphLevel=1-Math.pow(1-t,3);
+        if(t<1)self._transRafId=requestAnimationFrame(ramp);
+      })();
+    }else if(mode==='unmask'){
+      /* 비모핑 → unmask: 텍스쳐 교체, chat progress가 morphLevel 관리 */
+      simMat.uniforms.uSilTargets.value=targetTex;
+      renderUniforms.uSilTargets.value=targetTex;
       this.unmaskMode=true;
-      /* unmask에서 왔으면 morphLevel 유지, 아니면 0부터 서서히 */
-      if(this.morphLevel>0.15){
-        /* 이미 모핑 중 (unmask→interpret): 부드럽게 1.0으로 */
-        this.morphLevel=Math.max(this.morphLevel,0.5);
-      }else{
-        /* about/core→interpret: 0에서 천천히 올림 */
-        this.morphLevel=0;
-        var self=this,start=performance.now(),dur=3200;
-        (function ramp(){
-          if(!self.interpretMode){self._interpRafId=null;return}
-          var t=Math.min((performance.now()-start)/dur,1);
-          var e=1-Math.pow(1-t,3);
-          self.morphLevel=e;
-          if(t<1)self._interpRafId=requestAnimationFrame(ramp);
-          else self._interpRafId=null;
-        })();
-      }
     }else{
-      var tex=silTargetTex;
-      simMat.uniforms.uSilTargets.value=tex;
-      renderUniforms.uSilTargets.value=tex;
+      /* core/about */
       this.unmaskMode=false;
     }
   }

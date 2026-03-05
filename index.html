@@ -1776,6 +1776,7 @@ function switchPage(page){
   if(page==='about'){document.body.style.overflow='auto';el.style.overflow='auto'}else{document.body.style.overflow='hidden'}
   /* interpret 입력바 토글 */
   document.getElementById('interpretBar').style.display=(page==='interpret')?'flex':'none';
+  if(window._interpTextTimer){clearTimeout(window._interpTextTimer);window._interpTextTimer=null}
   if(page==='unmask'){
     if(window._alScene){window._alScene.setInterpret(false);window._alScene.unmaskMode=true;}
     if(typeof drawDotText==='function')drawDotText(currentLang);
@@ -1783,7 +1784,12 @@ function switchPage(page){
   }else if(page==='interpret'){
     if(window._alScene)window._alScene.setInterpret(true);
     if(typeof stopDotText==='function')stopDotText();
-    if(typeof drawInterpDots==='function')drawInterpDots(currentLang);
+    if(typeof stopInterpDots==='function')stopInterpDots();
+    /* 도형 모핑이 충분히 진행된 후 텍스트 등장 */
+    if(window._interpTextTimer)clearTimeout(window._interpTextTimer);
+    window._interpTextTimer=setTimeout(function(){
+      if(typeof drawInterpDots==='function')drawInterpDots(currentLang);
+    },2200);
   }else{
     if(window._alScene){window._alScene.setInterpret(false);window._alScene.unmaskMode=false;}
     if(typeof stopDotText==='function')stopDotText();
@@ -3654,13 +3660,29 @@ cg.add(new THREE.Mesh(new THREE.IcosahedronGeometry(3.8,5),_c1Mat));cg.add(new T
 function createPT(){}
 window._alScene={scene:scene,pts:pts,c1:cg.children[0],c2:cg.children[1],createPT:createPT,unmaskMode:false,morphLevel:1.0,_c1Mat:_c1Mat,_c2Mat:_c2Mat,
   interpretMode:false,
+  _interpRafId:null,
   setInterpret:function(on){
     this.interpretMode=on;
+    if(this._interpRafId){cancelAnimationFrame(this._interpRafId);this._interpRafId=null}
     var tex=on?interpTargetTex:silTargetTex;
     simMat.uniforms.uSilTargets.value=tex;
     renderUniforms.uSilTargets.value=tex;
-    this.unmaskMode=on;
-    if(on)this.morphLevel=1.0;
+    if(on){
+      this.morphLevel=0;
+      this.unmaskMode=true;
+      var self=this,start=performance.now(),dur=2800;
+      (function ramp(){
+        if(!self.interpretMode){self._interpRafId=null;return}
+        var t=Math.min((performance.now()-start)/dur,1);
+        /* ease-out cubic for smooth deceleration */
+        var e=1-Math.pow(1-t,3);
+        self.morphLevel=e;
+        if(t<1)self._interpRafId=requestAnimationFrame(ramp);
+        else self._interpRafId=null;
+      })();
+    }else{
+      this.unmaskMode=false;
+    }
   }
 };
 

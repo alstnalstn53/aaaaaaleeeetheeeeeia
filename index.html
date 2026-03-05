@@ -14,6 +14,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
 :root{--bg:#fafaf8;--text:#111;--sub:#555;--line:#e0e0e0;--nav-bg:rgba(250,250,248,0.45);--font-main:"Helvetica Neue","Arial",sans-serif;--font-mono:"Courier New",Courier,monospace;--cursor-color:#000;--cursor-border:rgba(0,0,0,0.1);--cursor-ring-bg:rgba(255,255,255,0.05)}
 body.dark-mode{--bg:#0a0a0a;--text:#e8e8e8;--sub:#999;--line:#222;--nav-bg:rgba(20,20,20,0.6);--cursor-color:#fff;--cursor-border:rgba(255,255,255,0.15);--cursor-ring-bg:rgba(255,255,255,0.03)}
@@ -404,7 +405,7 @@ body.dark-mode .urp-kw-ko{color:#e8e8e8}
 body.dark-mode .urp-empty{color:#555}
 
 .svc-page{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;position:relative;background:transparent}
-#dotTextCanvas{position:fixed;top:50%;left:50%;transform:translate(-50%,-58%);z-index:1;pointer-events:none;opacity:0;transition:opacity 0.6s ease}
+#dotTextCanvas{position:fixed;top:50%;left:50%;transform:translate(-50%,-58%);z-index:1;pointer-events:none;opacity:0;transition:opacity 0.6s ease;background:transparent;border:none;outline:none}
 #dotTextCanvas.visible{opacity:1}
 .svc-intro{text-align:center;max-width:560px;padding:0 30px}
 .svc-intro-num{font-size:11px;font-weight:600;color:#bbb;letter-spacing:0.15em;margin-bottom:16px}
@@ -3359,47 +3360,68 @@ if(edGenBtn)edGenBtn.addEventListener('click',generateEssenceDocument);
 })();
 </script>
 <script>
-/* ===== Dot-text Canvas2D (Unmask 텍스트를 점으로 표시) ===== */
+/* ===== Dot-text Canvas2D v3 — organic dot cloud ===== */
 var _DOT_TEXT={
   ko:{t1:'당신보다',t2:'당신을 잘 아는 지도.',s1:'Core에서 추출된 데이터 — 가치관, 패턴, 회피하는 것.',s2:'이 모든 것이 하나의 프로필로 합성됩니다.',
-    tf:'700 52px "Malgun Gothic","Apple SD Gothic Neo",sans-serif',sf:'300 20px "Malgun Gothic","Apple SD Gothic Neo",sans-serif'},
+    tf:'600 52px Pretendard,"Helvetica Neue",sans-serif',sf:'300 18px Pretendard,"Helvetica Neue",sans-serif'},
   en:{t1:'A map that knows you',t2:'better than you.',s1:'Data extracted from Core \u2014 values, patterns, avoidance.',s2:'All synthesized into a single profile.',
     tf:'700 56px "Helvetica Neue",Inter,Arial,sans-serif',sf:'300 20px "Helvetica Neue",Inter,Arial,sans-serif'},
   es:{t1:'Un mapa que te conoce',t2:'mejor que tú.',s1:'Datos extraídos de Core \u2014 valores, patrones, evasión.',s2:'Todo sintetizado en un solo perfil.',
     tf:'700 48px "Helvetica Neue",Inter,Arial,sans-serif',sf:'300 18px "Helvetica Neue",Inter,Arial,sans-serif'}
 };
+(function(){var el=document.createElement('span');el.textContent='당신보다 당신을 잘 아는 지도';el.style.cssText='font-family:Pretendard;font-weight:600;position:absolute;left:-9999px;top:-9999px;visibility:hidden;font-size:52px';document.body.appendChild(el)})();
 function drawDotText(lang){
   var canvas=document.getElementById('dotTextCanvas');if(!canvas)return;
   var tx=_DOT_TEXT[lang]||_DOT_TEXT['en'];
-  var W=640,H=220;
+  document.fonts.ready.then(function(){_renderDots(canvas,tx)});
+}
+/* seeded random for consistent jitter across redraws */
+function _dotRng(s){return function(){s=(s*16807+0)%2147483647;return(s&0x7fffffff)/2147483647}}
+function _renderDots(canvas,tx){
+  var W=660,H=230;
   var dpr=Math.min(window.devicePixelRatio||1,2);
   canvas.width=W*dpr;canvas.height=H*dpr;
   canvas.style.width=W+'px';canvas.style.height=H+'px';
   var ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
-  /* 배경: 반투명 그라디언트로 파티클 위에서 글씨가 보이게 */
   var isDark=document.body.classList.contains('dark-mode');
-  var bg=ctx.createRadialGradient(W/2,H/2,20,W/2,H/2,W*0.52);
-  bg.addColorStop(0,isDark?'rgba(10,10,10,0.55)':'rgba(250,250,248,0.5)');
-  bg.addColorStop(1,isDark?'rgba(10,10,10,0)':'rgba(250,250,248,0)');
-  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-  /* 오프스크린: 텍스트 렌더링 */
-  var off=document.createElement('canvas');off.width=W;off.height=H;
-  var ox=off.getContext('2d');
+  /* 고해상도 오프스크린 텍스트 렌더 */
+  var S=3;
+  var off=document.createElement('canvas');off.width=W*S;off.height=H*S;
+  var ox=off.getContext('2d');ox.scale(S,S);
   ox.fillStyle='#fff';ox.fillRect(0,0,W,H);
   ox.fillStyle='#000';ox.textAlign='center';
-  ox.font=tx.tf;ox.fillText(tx.t1,W/2,58);ox.fillText(tx.t2,W/2,122);
-  ox.font=tx.sf;ox.fillText(tx.s1,W/2,172);ox.fillText(tx.s2,W/2,200);
-  var imgD=ox.getImageData(0,0,W,H).data;
-  /* 그리드 → 점 찍기 */
-  ctx.fillStyle=isDark?'rgba(220,220,220,0.85)':'rgba(20,20,20,0.75)';
-  var sp=2.5,r=0.85;
+  ox.font=tx.tf;ox.fillText(tx.t1,W/2,60);ox.fillText(tx.t2,W/2,124);
+  ox.font=tx.sf;ox.fillText(tx.s1,W/2,175);ox.fillText(tx.s2,W/2,200);
+  var imgD=ox.getImageData(0,0,W*S,H*S).data;
+  var oW=W*S;
+  /* 점 수집: 위치 + darkness 값 */
+  var dots=[];
+  var sp=3.0,rng=_dotRng(42);
   for(var y=0;y<H;y+=sp){for(var x=0;x<W;x+=sp){
-    var i=(Math.floor(y)*W+Math.floor(x))*4;var dk=1-(imgD[i]+imgD[i+1]+imgD[i+2])/(3*255);
-    if(dk>0.25){ctx.beginPath();ctx.arc(x,y,r,0,6.2832);ctx.fill()}
+    var sx=Math.floor(x*S),sy=Math.floor(y*S);
+    var i=(sy*oW+sx)*4;
+    var dk=1-(imgD[i]+imgD[i+1]+imgD[i+2])/(3*255);
+    if(dk>0.35){
+      /* jitter: ±1px 랜덤 오프셋으로 그리드 패턴 깨기 */
+      var jx=x+(rng()-0.5)*2.0;
+      var jy=y+(rng()-0.5)*2.0;
+      dots.push({x:jx,y:jy,dk:dk});
+    }
   }}
+  /* 점 그리기: darkness에 따라 크기/투명도 변화 */
+  var baseR=0.75,baseA=isDark?0.85:0.7;
+  var cr=isDark?220:30,cg=isDark?220:30,cb=isDark?220:30;
+  for(var d=0;d<dots.length;d++){
+    var p=dots[d];
+    var r=baseR*(0.6+p.dk*0.5);
+    var a=baseA*(0.5+p.dk*0.5);
+    ctx.fillStyle='rgba('+cr+','+cg+','+cb+','+a.toFixed(2)+')';
+    ctx.beginPath();ctx.arc(p.x,p.y,r,0,6.2832);ctx.fill();
+  }
 }
-/* 초기 렌더 (숨겨진 상태로 준비) */
-drawDotText(typeof currentLang!=='undefined'?currentLang:'ko');
+document.fonts.ready.then(function(){
+  setTimeout(function(){drawDotText(typeof currentLang!=='undefined'?currentLang:'ko')},150);
+});
 
 (function(){
 'use strict';

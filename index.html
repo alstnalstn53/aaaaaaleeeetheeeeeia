@@ -1782,14 +1782,16 @@ function switchPage(page){
     if(typeof drawDotText==='function')drawDotText(currentLang);
     if(typeof stopInterpDots==='function')stopInterpDots();
   }else if(page==='interpret'){
+    /* unmask에서 오면 morphLevel 높은 상태 → 텍스트 빨리, about에서 오면 느리게 */
+    var fromMorph=window._alScene?window._alScene.morphLevel:0;
     if(window._alScene)window._alScene.setInterpret(true);
     if(typeof stopDotText==='function')stopDotText();
     if(typeof stopInterpDots==='function')stopInterpDots();
-    /* 도형 모핑이 충분히 진행된 후 텍스트 등장 */
     if(window._interpTextTimer)clearTimeout(window._interpTextTimer);
+    var textDelay=fromMorph>0.15?1200:2800;
     window._interpTextTimer=setTimeout(function(){
       if(typeof drawInterpDots==='function')drawInterpDots(currentLang);
-    },2200);
+    },textDelay);
   }else{
     if(window._alScene){window._alScene.setInterpret(false);window._alScene.unmaskMode=false;}
     if(typeof stopDotText==='function')stopDotText();
@@ -3436,18 +3438,23 @@ var interpTargetData=new Float32Array(N*4);
       idx++;
     }
   }
-  /* 나머지: 형태 주변 궤도 + 앰비언트 */
-  var orbitEnd=idx+Math.floor((N-idx)*0.3);
+  /* 형태 주변 궤도 파티클 — 경계를 모호하게, 도형 근처에서 움직임 */
+  var orbitEnd=idx+Math.floor((N-idx)*0.55);
   for(;idx<orbitEnd;idx++){
     var si2=Math.floor(rng()*shapes.length),sh2=shapes[si2];
-    var a=rng()*6.2832,b=rng()*3.1416,r2=sh2.r*1.5+rng()*20;
+    var a=rng()*6.2832,b=rng()*3.1416;
+    /* 가까운 궤도 (r*1.05~1.6) + 먼 궤도 (r*1.6~3.0) 혼합 */
+    var nearOrbit=rng()<0.6;
+    var r2=nearOrbit?(sh2.r*(1.05+rng()*0.55)):(sh2.r*(1.6+rng()*1.4));
     interpTargetData[idx*4]=sh2.cx+Math.sin(b)*Math.cos(a)*r2;
     interpTargetData[idx*4+1]=sh2.cy+Math.cos(b)*r2*0.6;
     interpTargetData[idx*4+2]=sh2.cz+Math.sin(b)*Math.sin(a)*r2*0.5;
-    interpTargetData[idx*4+3]=-0.05-rng()*0.4;
+    /* 가까운 궤도일수록 density 값 높게 (더 잘 보이고 느리게) */
+    interpTargetData[idx*4+3]=nearOrbit?(-0.03-rng()*0.15):(-0.15-rng()*0.3);
   }
+  /* 나머지: 넓은 앰비언트 */
   for(;idx<N;idx++){
-    var a=rng()*6.2832,b=rng()*3.1416,r2=20+rng()*rng()*120;
+    var a=rng()*6.2832,b=rng()*3.1416,r2=25+rng()*rng()*100;
     interpTargetData[idx*4]=Math.sin(b)*Math.cos(a)*r2;
     interpTargetData[idx*4+1]=Math.cos(b)*r2*0.7;
     interpTargetData[idx*4+2]=Math.sin(b)*Math.sin(a)*r2*0.4;
@@ -3664,23 +3671,34 @@ window._alScene={scene:scene,pts:pts,c1:cg.children[0],c2:cg.children[1],createP
   setInterpret:function(on){
     this.interpretMode=on;
     if(this._interpRafId){cancelAnimationFrame(this._interpRafId);this._interpRafId=null}
-    var tex=on?interpTargetTex:silTargetTex;
-    simMat.uniforms.uSilTargets.value=tex;
-    renderUniforms.uSilTargets.value=tex;
     if(on){
-      this.morphLevel=0;
+      /* 텍스쳐 스왑 — unmask에서 오면 currentMorph가 이미 높으므로
+         파티클이 자연스럽게 손→도형으로 이동함 (흩어짐 없음) */
+      var tex=interpTargetTex;
+      simMat.uniforms.uSilTargets.value=tex;
+      renderUniforms.uSilTargets.value=tex;
       this.unmaskMode=true;
-      var self=this,start=performance.now(),dur=2800;
-      (function ramp(){
-        if(!self.interpretMode){self._interpRafId=null;return}
-        var t=Math.min((performance.now()-start)/dur,1);
-        /* ease-out cubic for smooth deceleration */
-        var e=1-Math.pow(1-t,3);
-        self.morphLevel=e;
-        if(t<1)self._interpRafId=requestAnimationFrame(ramp);
-        else self._interpRafId=null;
-      })();
+      /* unmask에서 왔으면 morphLevel 유지, 아니면 0부터 서서히 */
+      if(this.morphLevel>0.15){
+        /* 이미 모핑 중 (unmask→interpret): 부드럽게 1.0으로 */
+        this.morphLevel=Math.max(this.morphLevel,0.5);
+      }else{
+        /* about/core→interpret: 0에서 천천히 올림 */
+        this.morphLevel=0;
+        var self=this,start=performance.now(),dur=3200;
+        (function ramp(){
+          if(!self.interpretMode){self._interpRafId=null;return}
+          var t=Math.min((performance.now()-start)/dur,1);
+          var e=1-Math.pow(1-t,3);
+          self.morphLevel=e;
+          if(t<1)self._interpRafId=requestAnimationFrame(ramp);
+          else self._interpRafId=null;
+        })();
+      }
     }else{
+      var tex=silTargetTex;
+      simMat.uniforms.uSilTargets.value=tex;
+      renderUniforms.uSilTargets.value=tex;
       this.unmaskMode=false;
     }
   }

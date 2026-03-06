@@ -3474,7 +3474,7 @@ var rtA=new THREE.WebGLRenderTarget(SIZE,SIZE,rtOpts);var rtB=new THREE.WebGLRen
 var simVert='varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position,1.0);}';
 var simFrag=[
 'precision highp float;','varying vec2 vUv;',
-'uniform sampler2D uPositions;','uniform sampler2D uInitPositions;','uniform sampler2D uSilTargets;',
+'uniform sampler2D uPositions;','uniform sampler2D uInitPositions;','uniform sampler2D uSilTargets;','uniform sampler2D uSilTargets2;','uniform float uTargetBlend;',
 'uniform float uTime;','uniform float uMorph;','uniform float uRotAngle;','uniform vec3 uMouse3D;','uniform float uMouseActive;',
 'vec3 mod289(vec3 x){return x-floor(x/289.0)*289.0;}',
 'vec4 mod289v4(vec4 x){return x-floor(x/289.0)*289.0;}',
@@ -3513,7 +3513,8 @@ var simFrag=[
 '  return curl;',
 '}','',
 'void main(){',
-'  vec4 cur=texture2D(uPositions,vUv);vec4 init=texture2D(uInitPositions,vUv);vec4 target=texture2D(uSilTargets,vUv);',
+'  vec4 cur=texture2D(uPositions,vUv);vec4 init=texture2D(uInitPositions,vUv);',
+'  vec4 target=mix(texture2D(uSilTargets,vUv),texture2D(uSilTargets2,vUv),uTargetBlend);',
 '  float seed=init.w;vec3 pos=cur.xyz;float isTextGlobal=step(1.4,target.w);',
 '  float mp=uMorph*uMorph*(3.0-2.0*uMorph);',
 '  vec3 nDir=normalize(init.xyz);',
@@ -3559,7 +3560,7 @@ var simFrag=[
 '}'
 ].join('\n');
 
-var simMat=new THREE.ShaderMaterial({vertexShader:simVert,fragmentShader:simFrag,uniforms:{uPositions:{value:null},uInitPositions:{value:initPosTex},uSilTargets:{value:silTargetTex},uTime:{value:0},uMorph:{value:0},uRotAngle:{value:0},uMouse3D:{value:new THREE.Vector3()},uMouseActive:{value:0}}});
+var simMat=new THREE.ShaderMaterial({vertexShader:simVert,fragmentShader:simFrag,uniforms:{uPositions:{value:null},uInitPositions:{value:initPosTex},uSilTargets:{value:silTargetTex},uSilTargets2:{value:silTargetTex},uTargetBlend:{value:0},uTime:{value:0},uMorph:{value:0},uRotAngle:{value:0},uMouse3D:{value:new THREE.Vector3()},uMouseActive:{value:0}}});
 var simScene=new THREE.Scene();var simCamera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
 simScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),simMat));
 
@@ -3570,11 +3571,11 @@ for(var _w=0;_w<60;_w++){simMat.uniforms.uPositions.value=(_w%2===0)?rtA.texture
 
 /* 렌더 셰이더 */
 var renderVert=[
-'attribute vec2 aRef;','uniform sampler2D uPositions;','uniform sampler2D uSilTargets;',
+'attribute vec2 aRef;','uniform sampler2D uPositions;','uniform sampler2D uSilTargets;','uniform sampler2D uSilTargets2;','uniform float uTargetBlend;',
 'uniform float uPixelRatio;','uniform float uMorph;','uniform float uDark;',
 'varying float vAlpha;','varying float vDensity;','varying float vMorph;','',
 'void main(){',
-'  vec4 posData=texture2D(uPositions,aRef);vec4 silData=texture2D(uSilTargets,aRef);',
+'  vec4 posData=texture2D(uPositions,aRef);vec4 silData=mix(texture2D(uSilTargets,aRef),texture2D(uSilTargets2,aRef),uTargetBlend);',
 '  vec3 pos=posData.xyz;vec4 mvPos=modelViewMatrix*vec4(pos,1.0);gl_Position=projectionMatrix*mvPos;',
 '  float mp=uMorph*uMorph*(3.0-2.0*uMorph);vMorph=mp;',
 '  float density=silData.w;float absDen=max(density,0.0);float isAmb=step(density,-0.5);',
@@ -3605,7 +3606,7 @@ var pGeo=new THREE.BufferGeometry();var refs=new Float32Array(N*2);var dummyPos=
 for(var i=0;i<N;i++){refs[i*2]=(i%SIZE)/SIZE;refs[i*2+1]=Math.floor(i/SIZE)/SIZE}
 pGeo.setAttribute('position',new THREE.BufferAttribute(dummyPos,3));pGeo.setAttribute('aRef',new THREE.BufferAttribute(refs,2));
 
-var renderUniforms={uPositions:{value:rtA.texture},uSilTargets:{value:silTargetTex},uPixelRatio:{value:Math.min(devicePixelRatio,2)},uMorph:{value:0},uDark:{value:0}};
+var renderUniforms={uPositions:{value:rtA.texture},uSilTargets:{value:silTargetTex},uSilTargets2:{value:silTargetTex},uTargetBlend:{value:0},uPixelRatio:{value:Math.min(devicePixelRatio,2)},uMorph:{value:0},uDark:{value:0}};
 var renderMat=new THREE.ShaderMaterial({vertexShader:renderVert,fragmentShader:renderFrag,uniforms:renderUniforms,transparent:true,depthWrite:false,blending:THREE.NormalBlending});
 var pts=new THREE.Points(pGeo,renderMat);scene.add(pts);
 
@@ -3684,55 +3685,57 @@ window._alScene={scene:scene,pts:pts,c1:cg.children[0],c2:cg.children[1],createP
 
     if(wasMorphed&&needsMorph){
       /* 모핑 상태 → 모핑 상태 (unmask↔interpret)
-         핵심: morphLevel을 높게 유지해야 homeForce(중심 끌림)가 작동 안 함.
-         0.65까지만 살짝 내려서 파티클이 약간 느슨해진 뒤
-         텍스쳐 교체 → 파티클이 현 위치에서 새 타겟으로 자연스럽게 흘러감.
-         전체 5초, dip 지점 30% (1.5초) */
-      var startML=this.morphLevel;
-      var dipTo=0.65;
-      var totalDur=5000;
-      var dipPoint=0.30;
-      var dStart=performance.now();
-      var swapped=false;
-      (function transition(){
+         GPU 셰이더에서 두 타겟 텍스쳐를 크로스페이드.
+         morphLevel은 1.0 유지 → homeForce 없음.
+         uTargetBlend 0→1로 4초간 서서히.
+         파티클이 현재 위치에서 새 타겟으로 자연스럽게 흘러감. */
+      /* uSilTargets = 현재(출발), uSilTargets2 = 목표(도착) */
+      var currentTex=(mode==='interpret')?silTargetTex:interpTargetTex;
+      simMat.uniforms.uSilTargets.value=currentTex;
+      renderUniforms.uSilTargets.value=currentTex;
+      simMat.uniforms.uSilTargets2.value=targetTex;
+      renderUniforms.uSilTargets2.value=targetTex;
+      simMat.uniforms.uTargetBlend.value=0;
+      renderUniforms.uTargetBlend.value=0;
+      this.morphLevel=1.0;
+      var dStart=performance.now(),dur=4000;
+      (function crossfade(){
         if(self._targetMode!==mode)return;
-        var t=Math.min((performance.now()-dStart)/totalDur,1);
-        if(t<dipPoint){
-          /* Phase 1: startML → 0.65 (살짝 풀기, 숨 내쉬기) */
-          var p=t/dipPoint;
-          var e=p*p*(3-2*p);
-          self.morphLevel=startML-(startML-dipTo)*e;
+        var t=Math.min((performance.now()-dStart)/dur,1);
+        var e=t*t*(3-2*t); /* smoothstep */
+        simMat.uniforms.uTargetBlend.value=e;
+        renderUniforms.uTargetBlend.value=e;
+        if(t>=1){
+          /* 완료: 최종 텍스쳐를 기본으로 설정, blend 리셋 */
+          simMat.uniforms.uSilTargets.value=targetTex;
+          renderUniforms.uSilTargets.value=targetTex;
+          simMat.uniforms.uTargetBlend.value=0;
+          renderUniforms.uTargetBlend.value=0;
         }else{
-          /* Phase 2: 텍스쳐 교체 후 0.65 → 1.0 (새 형태로 안착) */
-          if(!swapped){
-            swapped=true;
-            simMat.uniforms.uSilTargets.value=targetTex;
-            renderUniforms.uSilTargets.value=targetTex;
-          }
-          var p=(t-dipPoint)/(1-dipPoint);
-          var e=1-Math.pow(1-p,3);
-          self.morphLevel=dipTo+(1.0-dipTo)*e;
+          self._transRafId=requestAnimationFrame(crossfade);
         }
-        if(t<1)self._transRafId=requestAnimationFrame(transition);
       })();
     }else if(wasMorphed&&!needsMorph){
       /* 모핑 상태 → core/about: 서서히 흩어짐 */
+      simMat.uniforms.uTargetBlend.value=0;
+      renderUniforms.uTargetBlend.value=0;
       var startML=this.morphLevel;
-      var dStart=performance.now(),dDur=1600;
+      var dStart=performance.now(),dDur=2400;
       (function fadeOut(){
         if(self._targetMode!==mode)return;
         var t=Math.min((performance.now()-dStart)/dDur,1);
-        self.morphLevel=startML*Math.pow(1-t,2);
+        self.morphLevel=startML*(1-t*t*(3-2*t));
         if(t>=1){
           self.morphLevel=0;self.unmaskMode=false;
-          simMat.uniforms.uSilTargets.value=targetTex;
-          renderUniforms.uSilTargets.value=targetTex;
+          simMat.uniforms.uSilTargets.value=silTargetTex;
+          renderUniforms.uSilTargets.value=silTargetTex;
         }else{
           self._transRafId=requestAnimationFrame(fadeOut);
         }
       })();
     }else if(mode==='interpret'){
       /* 비모핑 → interpret: 텍스쳐 교체 후 서서히 구성 */
+      simMat.uniforms.uTargetBlend.value=0;renderUniforms.uTargetBlend.value=0;
       simMat.uniforms.uSilTargets.value=targetTex;
       renderUniforms.uSilTargets.value=targetTex;
       this.unmaskMode=true;this.morphLevel=0;
@@ -3744,7 +3747,8 @@ window._alScene={scene:scene,pts:pts,c1:cg.children[0],c2:cg.children[1],createP
         if(t<1)self._transRafId=requestAnimationFrame(ramp);
       })();
     }else if(mode==='unmask'){
-      /* 비모핑 → unmask: 텍스쳐 교체, 초기 morphLevel 0.3으로 서서히 등장 */
+      /* 비모핑 → unmask: 텍스쳐 교체 후 서서히 등장 */
+      simMat.uniforms.uTargetBlend.value=0;renderUniforms.uTargetBlend.value=0;
       simMat.uniforms.uSilTargets.value=targetTex;
       renderUniforms.uSilTargets.value=targetTex;
       this.unmaskMode=true;

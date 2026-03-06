@@ -720,14 +720,17 @@ body.dark-mode .um-depth-fill{background:#fff;opacity:0.25}
 .cs-num{font-size:11px;font-weight:600;color:#bbb;letter-spacing:0.12em}
 .cs-card-title{font-size:18px;font-weight:500;letter-spacing:0.05em;margin:12px 0 10px;color:var(--text)}
 .cs-card-desc{font-size:13px;color:#888;line-height:1.7;font-weight:400}
+.cs-badge{display:inline-block;padding:3px 10px;font-size:10px;font-weight:600;letter-spacing:0.08em;color:#888;background:rgba(0,0,0,0.04);border-radius:4px;margin-top:8px}
 .cs-btn{margin-top:20px;padding:10px 20px;background:#000;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;transition:0.2s;font-family:inherit;letter-spacing:0.03em}
 .cs-btn:hover{background:#222}
 /* 서브 토글 바 */
-.chat-toggle{position:fixed;top:100px;left:50%;transform:translateX(-50%);display:flex;gap:2px;padding:3px;background:rgba(0,0,0,0.04);border-radius:8px;z-index:6500;backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,0.05)}
-.ct-btn{padding:7px 18px;font-size:11px;font-weight:500;letter-spacing:0.06em;border:none;border-radius:6px;cursor:pointer;transition:all 0.3s;background:transparent;color:#999;font-family:inherit}
-.ct-btn:hover{color:#555}
-.ct-btn.active{background:#000;color:#fff}
-@media(max-width:600px){.chat-select-cards{flex-direction:column}.chat-toggle{top:90px}}
+.chat-toggle{position:fixed;top:120px;left:50%;transform:translateX(-50%);display:flex;gap:0;padding:3px;background:rgba(0,0,0,0.04);border-radius:10px;z-index:6500;backdrop-filter:blur(14px);border:1px solid rgba(0,0,0,0.06)}
+.chat-toggle .ct-indicator{position:absolute;top:3px;left:3px;height:calc(100% - 6px);width:50%;border-radius:8px;background:#000;transition:transform 0.45s cubic-bezier(0.4,0,0.1,1);pointer-events:none;z-index:0}
+.chat-toggle.interpret-active .ct-indicator{transform:translateX(100%)}
+.ct-btn{position:relative;z-index:1;padding:8px 22px;font-size:11px;font-weight:500;letter-spacing:0.08em;border:none;border-radius:8px;cursor:pointer;transition:color 0.35s ease;background:transparent;color:#888;font-family:inherit}
+.ct-btn:hover{color:#444}
+.ct-btn.active{color:#fff}
+@media(max-width:600px){.chat-select-cards{flex-direction:column}.chat-toggle{top:110px}}
 /* TRIAL MODE */
 .trial-progress{display:flex;align-items:center;gap:8px;padding:0 16px 8px;border-bottom:1px solid rgba(0,0,0,0.04)}
 .trial-bar{flex:1;height:3px;background:rgba(0,0,0,0.06);border-radius:2px;overflow:hidden}
@@ -985,9 +988,10 @@ body.dark-mode .cs-card:hover{border-color:rgba(255,255,255,0.18);box-shadow:0 1
 body.dark-mode .cs-btn{background:#fff;color:#000}
 body.dark-mode .cs-btn:hover{background:#ddd}
 body.dark-mode .chat-toggle{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.08)}
-body.dark-mode .ct-btn{color:#777}
-body.dark-mode .ct-btn:hover{color:#bbb}
-body.dark-mode .ct-btn.active{background:#fff;color:#000}
+body.dark-mode .chat-toggle .ct-indicator{background:#fff}
+body.dark-mode .ct-btn{color:#666}
+body.dark-mode .ct-btn:hover{color:#aaa}
+body.dark-mode .ct-btn.active{color:#000}
 body.dark-mode .ir-field{color:#eee}
 body.dark-mode .ir-badge{color:#888;border-color:rgba(255,255,255,0.1)}
 body.dark-mode .ir-card{background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.06)}
@@ -1210,7 +1214,7 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
     <!-- ===== END DEMO SECTIONS ===== -->
     <section id="sec-method"><span class="label typing-target" data-text="The Method"></span><div class="method-list">
       <div class="method-row reveal reveal-d1"><div class="method-left"><span class="m-num">/0.1</span><p class="m-desc"><strong>Unmask</strong><br>대화를 통해 당신의 패턴, 가치관, 잠재 동기를 추출하고<br>하나의 프로필로 합성합니다.</p><button class="m-btn" onclick="goPage('chat')">Start →</button></div><div class="method-right"><div class="big-typo">UNMASK</div></div></div>
-      <div class="method-row reveal reveal-d2"><div class="method-left"><span class="m-num">/0.2</span><p class="m-desc"><strong>Interpret</strong><br>산업의 본질과 당신의 본질이 만나는 교차점을 찾습니다.</p><button class="m-btn" onclick="goPage('chat')">Start →</button></div><div class="method-right"><div class="big-typo">INTERPRET</div></div></div>
+      <div class="method-row reveal reveal-d2"><div class="method-left"><span class="m-num">/0.2</span><p class="m-desc"><strong>Interpret</strong><br>브랜드와 산업의 본질을 해석하고 당신의 본질과 만나는 교차점을 찾습니다.</p><button class="m-btn" onclick="goPage('chat')">Start →</button></div><div class="method-right"><div class="big-typo">INTERPRET</div></div></div>
     </div></section>
     <footer><div>© 2026 Aletheia</div><div>Less but Better</div></footer>
   </div>
@@ -1474,8 +1478,9 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
       </div>
       <div class="cs-card" data-mode="interpret">
         <span class="cs-num">/0.2</span>
+        <span class="cs-badge">기업 · 브랜드</span>
         <h3 class="cs-card-title">INTERPRET</h3>
-        <p class="cs-card-desc">산업의 본질과 당신의 본질이<br>만나는 교차점을 찾습니다.</p>
+        <p class="cs-card-desc">브랜드와 산업의 본질을 해석하고<br>당신의 본질과 만나는 교차점을 찾습니다.</p>
         <button class="cs-btn">Start →</button>
       </div>
     </div>
@@ -1484,6 +1489,7 @@ body.dark-mode .cb-attach-preview-icon svg{stroke:#888}
 
 <!-- 서브 토글 바 (unmask/interpret 모드 전환) -->
 <div class="chat-toggle" id="chatToggle" style="display:none">
+  <div class="ct-indicator"></div>
   <button class="ct-btn active" data-mode="unmask">UNMASK</button>
   <button class="ct-btn" data-mode="interpret">INTERPRET</button>
 </div>
@@ -1886,6 +1892,7 @@ function switchPage(page){
   var toggle=document.getElementById('chatToggle');
   if(page==='unmask'||page==='interpret'){
     toggle.style.display='flex';
+    toggle.classList.toggle('interpret-active',page==='interpret');
     toggle.querySelectorAll('.ct-btn').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-mode')===page)});
   }else{
     toggle.style.display='none';
@@ -1896,9 +1903,9 @@ function switchPage(page){
     if(window._alScene)window._alScene.transitionTo('unmask');
     if(typeof stopInterpDots==='function')stopInterpDots();
     if(wasMorphed){
-      setTimeout(function(){if(typeof drawDotText==='function')drawDotText(currentLang)},3200);
+      setTimeout(function(){if(typeof drawDotText==='function')drawDotText(currentLang)},2000);
     }else{
-      if(typeof drawDotText==='function')drawDotText(currentLang);
+      setTimeout(function(){if(typeof drawDotText==='function')drawDotText(currentLang)},1600);
     }
   }else if(page==='interpret'){
     if(window._alScene)window._alScene.transitionTo('interpret');
@@ -3371,9 +3378,9 @@ function _buildScatterDots(lang){
   ox.font=tx.sf;ox.fillText(tx.s1,TW/2,130);ox.fillText(tx.s2,TW/2,154);
   var imgD=ox.getImageData(0,0,TW*S,TH*S).data;
   var oW=TW*S;
-  /* 화면 중앙 기준 — 더 위쪽에 배치 (손바닥 위) */
+  /* 화면 중앙 기준 배치 */
   var vw=_dotSys.vw,vh=_dotSys.vh;
-  var offX=(vw-TW)/2, offY=vh*0.5-TH*0.85;
+  var offX=(vw-TW)/2, offY=vh*0.5-TH*0.45;
   var dots=[],sp=1.6,rng=_dotRng(42);
   for(var y=0;y<TH;y+=sp){for(var x=0;x<TW;x+=sp){
     var sx=Math.floor(x*S),sy=Math.floor(y*S);

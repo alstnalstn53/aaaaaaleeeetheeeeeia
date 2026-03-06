@@ -733,11 +733,6 @@ body.dark-mode .um-depth-fill{background:#fff;opacity:0.25}
 .trial-bar{flex:1;height:3px;background:rgba(0,0,0,0.06);border-radius:2px;overflow:hidden}
 .trial-fill{height:100%;width:100%;background:linear-gradient(90deg,#000,#444);border-radius:2px;transition:width 1s linear}
 .trial-time{font-size:11px;color:#999;font-weight:500;letter-spacing:0.04em;min-width:36px;text-align:right}
-.trial-options{display:flex;flex-wrap:wrap;gap:8px;padding:8px 0 4px;margin-left:40px}
-.trial-opt{padding:9px 18px;font-size:13px;font-weight:400;border:1px solid rgba(0,0,0,0.1);border-radius:20px;background:rgba(255,255,255,0.6);backdrop-filter:blur(6px);cursor:pointer;transition:all 0.25s ease;font-family:inherit;color:#333;line-height:1.4}
-.trial-opt:hover{border-color:rgba(0,0,0,0.25);background:rgba(0,0,0,0.03);transform:translateY(-1px)}
-.trial-opt.selected{background:#000;color:#fff;border-color:#000;pointer-events:none}
-.trial-opt.disabled{opacity:0.35;pointer-events:none}
 .trial-result{max-width:380px;margin:24px auto;padding:32px 28px;border:1px solid rgba(0,0,0,0.06);border-radius:16px;background:rgba(255,255,255,0.7);backdrop-filter:blur(12px);text-align:center}
 .tr-header h3{font-size:20px;font-weight:600;margin:0 0 6px;color:var(--text)}
 .tr-header p{font-size:13px;color:#888;margin:0 0 20px}
@@ -755,9 +750,6 @@ body.dark-mode .um-depth-fill{background:#fff;opacity:0.25}
 .tr-btn-pricing:hover{border-color:rgba(0,0,0,0.25);color:#333}
 body.dark-mode .trial-bar{background:rgba(255,255,255,0.08)}
 body.dark-mode .trial-fill{background:linear-gradient(90deg,#fff,#aaa)}
-body.dark-mode .trial-opt{border-color:rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:#ccc}
-body.dark-mode .trial-opt:hover{border-color:rgba(255,255,255,0.25);background:rgba(255,255,255,0.08)}
-body.dark-mode .trial-opt.selected{background:#fff;color:#000;border-color:#fff}
 body.dark-mode .trial-result{background:rgba(30,30,30,0.8);border-color:rgba(255,255,255,0.08)}
 body.dark-mode .tr-tag{background:rgba(255,255,255,0.08);color:#bbb}
 body.dark-mode .tr-teaser{background:rgba(255,255,255,0.04)}
@@ -2030,82 +2022,12 @@ document.getElementById('interpretInput').addEventListener('keydown',function(e)
 
 
 /* ===== TRIAL SURVEY MODE ===== */
-var trialMode=false,trialDone=false,trialStep=0,trialAnswers=[],trialTimerStart=0,trialTimerId=null;
+var trialMode=false,trialDone=false,trialTurnCount=0,trialHistory=[],trialTimerStart=0,trialTimerId=null;
 var TRIAL_DURATION=5*60*1000;
-var TRIAL_FIXED_COUNT=3;
-var TRIAL_TOTAL=6;
-var TRIAL_QUESTIONS={
-  q1:{
-    text:'어떤 영역에서 본질을 찾고 싶으신가요?',
-    options:[
-      {label:'직업 / 커리어',value:'career'},
-      {label:'공부 / 학업',value:'study'},
-      {label:'취향 / 취미',value:'hobby'},
-      {label:'창작 / 크리에이터',value:'creator'},
-      {label:'아직 모르겠어요',value:'unsure'}
-    ]
-  },
-  q2:{
-    career:{text:'커리어에서 가장 중요하게 느끼는 건?',options:[
-      {label:'성장 가능성',value:'growth'},{label:'안정성',value:'stability'},
-      {label:'자율성',value:'autonomy'},{label:'사회적 영향력',value:'impact'}
-    ]},
-    study:{text:'공부할 때 가장 몰입되는 순간은?',options:[
-      {label:'새로운 걸 이해했을 때',value:'understanding'},{label:'남들과 토론할 때',value:'discussion'},
-      {label:'혼자 깊이 파고들 때',value:'deep_dive'},{label:'실제로 적용해볼 때',value:'application'}
-    ]},
-    hobby:{text:'취미를 할 때 가장 좋은 순간은?',options:[
-      {label:'몰입하고 있을 때',value:'flow'},{label:'결과물을 볼 때',value:'result'},
-      {label:'누군가와 나눌 때',value:'sharing'},{label:'새로운 걸 시도할 때',value:'novelty'}
-    ]},
-    creator:{text:'창작에서 가장 중요한 건?',options:[
-      {label:'나만의 색깔',value:'identity'},{label:'반응과 공감',value:'resonance'},
-      {label:'퀄리티',value:'quality'},{label:'꾸준한 루틴',value:'routine'}
-    ]},
-    unsure:{text:'지금 마음에 가장 가까운 감정은?',options:[
-      {label:'뭔가 바꾸고 싶어요',value:'change'},{label:'방향을 못 잡겠어요',value:'lost'},
-      {label:'궁금한 게 많아요',value:'curious'},{label:'지금은 괜찮지만 불안해요',value:'anxious'}
-    ]}
-  },
-  q3:{
-    career:{text:'10년 후 이상적인 하루를 상상하면?',options:[
-      {label:'프로젝트를 이끌고 있다',value:'leading'},{label:'원하는 곳에서 일한다',value:'location_free'},
-      {label:'전문가로 인정받는다',value:'expert'},{label:'나만의 사업을 한다',value:'own_biz'}
-    ]},
-    study:{text:'배움이 끝난 후 하고 싶은 건?',options:[
-      {label:'가르치는 것',value:'teaching'},{label:'연구를 계속하는 것',value:'research'},
-      {label:'현장에서 실행하는 것',value:'practice'},{label:'새로운 분야로 넘어가는 것',value:'pivot'}
-    ]},
-    hobby:{text:'이 취미가 직업이 된다면?',options:[
-      {label:'꿈이 이뤄지는 것',value:'dream'},{label:'조금 무섭다',value:'scary'},
-      {label:'돈은 됐고 계속 즐기고 싶다',value:'enjoy'},{label:'이미 생각해봤다',value:'considered'}
-    ]},
-    creator:{text:'작업에서 가장 힘든 순간은?',options:[
-      {label:'시작하기까지의 막막함',value:'blank'},{label:'반응이 없을 때',value:'no_response'},
-      {label:'비교하게 될 때',value:'comparison'},{label:'완벽하지 않을 때',value:'imperfect'}
-    ]},
-    unsure:{text:'어릴 때 시간 가는 줄 모르고 했던 건?',options:[
-      {label:'만들기/그리기',value:'making'},{label:'읽기/상상하기',value:'reading'},
-      {label:'사람들과 어울리기',value:'socializing'},{label:'탐험/모험',value:'exploring'}
-    ]}
-  }
-};
-var TRIAL_TAG_MAP={
-  career:'커리어탐색',study:'학문지향',hobby:'취향중심',creator:'창작자',unsure:'자기탐색',
-  growth:'성장지향',stability:'안정추구',autonomy:'자율지향',impact:'영향력추구',
-  understanding:'이해지향',discussion:'소통형',deep_dive:'몰입형',application:'실행지향',
-  flow:'몰입형',result:'결과지향',sharing:'공유형',novelty:'탐험가',
-  identity:'정체성추구',resonance:'공감형',quality:'완벽주의',routine:'루틴형',
-  change:'변화욕구',lost:'방향탐색',curious:'호기심',anxious:'불안인식',
-  leading:'리더형',location_free:'자유추구',expert:'전문가지향',own_biz:'독립지향',
-  teaching:'교육지향',research:'탐구형',practice:'실행형',pivot:'전환지향',
-  dream:'이상주의',scary:'신중형',enjoy:'현재지향',considered:'계획형',
-  blank:'시작두려움',no_response:'인정욕구',comparison:'비교의식',imperfect:'완벽주의',
-  making:'창작본능',reading:'사색가',socializing:'관계중심',exploring:'탐험본능'
-};
+var TRIAL_MAX_TURNS=5;
 
 function startTrial(){
-  trialMode=true;trialDone=false;trialStep=0;trialAnswers=[];
+  trialMode=true;trialDone=false;trialTurnCount=0;trialHistory=[];
   trialTimerStart=Date.now();
   /* Show progress bar */
   var prog=document.getElementById('trialProgress');
@@ -2113,17 +2035,19 @@ function startTrial(){
   /* Hide onboarding welcome */
   var wel=document.getElementById('cbWelcome');
   if(wel)wel.style.display='none';
-  /* Hide input area — trial uses pill buttons only */
+  /* Show input area — free text input */
   var inputArea=document.getElementById('cbInputArea');
-  if(inputArea)inputArea.style.display='none';
+  if(inputArea){inputArea.style.display='';inputArea.classList.remove('locked')}
+  var ta2=document.getElementById('cbTa');
+  if(ta2){ta2.disabled=false;ta2.placeholder='자유롭게 얘기해주세요...'}
   /* Clear msgs */
   var msgs2=document.getElementById('cbMsgs');
   if(msgs2)msgs2.innerHTML='';
   /* Start timer */
   trialTimerId=setInterval(updateTrialTimer,1000);
-  /* Show intro message then first question */
-  addMsg('ai','안녕하세요! Aletheia입니다.\n5분간 간단한 탐색을 해볼까요? 몇 가지 질문에 답해주세요.');
-  setTimeout(function(){showTrialQuestion(0)},800);
+  /* First message */
+  addMsg('ai','반갑습니다! 잠깐 이야기 나눠볼까요?\n\n요즘 좋아하는 취향이나 취미가 있으세요? 좋아하는 브랜드, 끌리는 분위기, 시간 가는 줄 모르고 하는 것... 뭐든 편하게 얘기해주세요.');
+  trialHistory.push({role:'assistant',content:'반갑습니다! 잠깐 이야기 나눠볼까요?\n\n요즘 좋아하는 취향이나 취미가 있으세요? 좋아하는 브랜드, 끌리는 분위기, 시간 가는 줄 모르고 하는 것... 뭐든 편하게 얘기해주세요.'});
 }
 
 function updateTrialTimer(){
@@ -2138,130 +2062,69 @@ function updateTrialTimer(){
   if(remaining<=0){endTrial()}
 }
 
-function showTrialQuestion(step){
-  if(!trialMode)return;
-  if(step>=TRIAL_TOTAL){endTrial();return}
-  trialStep=step;
-  if(step<TRIAL_FIXED_COUNT){
-    /* Fixed branching questions */
-    var qData;
-    if(step===0){
-      qData=TRIAL_QUESTIONS.q1;
-    }else if(step===1){
-      var q1Val=trialAnswers[0]?trialAnswers[0].a:'unsure';
-      qData=TRIAL_QUESTIONS.q2[q1Val]||TRIAL_QUESTIONS.q2.unsure;
-    }else if(step===2){
-      var q1Val2=trialAnswers[0]?trialAnswers[0].a:'unsure';
-      qData=TRIAL_QUESTIONS.q3[q1Val2]||TRIAL_QUESTIONS.q3.unsure;
-    }
-    showTrialOptions(qData.text,qData.options);
-  }else{
-    /* AI-generated questions */
+function sendTrialMsg(text){
+  if(!trialMode||!text||!text.trim())return;
+  text=text.trim();
+  addMsg('user',text);
+  trialHistory.push({role:'user',content:text});
+  trialTurnCount++;
+  /* Clear input */
+  var ta2=document.getElementById('cbTa');
+  if(ta2){ta2.value='';ta2.style.height='auto'}
+  var sendBtn2=document.getElementById('cbSend');
+  if(sendBtn2)sendBtn2.classList.remove('ready');
+  /* Check if trial should end */
+  if(trialTurnCount>=TRIAL_MAX_TURNS){
+    /* Last turn: get summary instead of follow-up */
     var typ=addTyping();
-    var summaryMsg=trialAnswers.map(function(a){return 'Q: '+a.q+' → A: '+a.label}).join('\n');
-    callClaude('trial_survey',[{role:'user',content:summaryMsg}],300).then(function(resp){
+    callClaude('trial_survey',trialHistory,500).then(function(resp){
       typ.remove();
-      try{
-        var clean=resp.replace(/```json|```/g,'').trim();
-        var data=JSON.parse(clean);
-        showTrialOptions(data.question,data.options);
-      }catch(e){
-        console.log('[Trial] AI question parse error:',e);
-        endTrial();
-      }
-    }).catch(function(err){
-      console.log('[Trial] AI question error:',err);
-      typ.remove();
-      endTrial();
-    });
+      trialHistory.push({role:'assistant',content:resp});
+      addMsg('ai',resp);
+      setTimeout(function(){endTrial()},1500);
+    }).catch(function(){typ.remove();endTrial()});
+    return;
   }
-}
-
-function showTrialOptions(question,options){
-  addMsg('ai',question);
-  var msgs2=document.getElementById('cbMsgs');
-  var wrap=document.createElement('div');wrap.className='trial-options';
-  options.forEach(function(opt){
-    var btn=document.createElement('button');
-    btn.className='trial-opt';
-    btn.textContent=opt.label;
-    btn.setAttribute('data-value',opt.value);
-    btn.addEventListener('click',function(){
-      /* Mark selected, disable all */
-      wrap.querySelectorAll('.trial-opt').forEach(function(b){b.classList.add('disabled')});
-      btn.classList.remove('disabled');btn.classList.add('selected');
-      onTrialAnswer(opt.value,opt.label,question);
-    });
-    wrap.appendChild(btn);
+  /* AI follow-up */
+  var typ2=addTyping();
+  callClaude('trial_survey',trialHistory,400).then(function(resp){
+    typ2.remove();
+    trialHistory.push({role:'assistant',content:resp});
+    addMsg('ai',resp);
+  }).catch(function(err){
+    console.log('[Trial] AI error:',err);
+    typ2.remove();
+    addMsg('ai','흥미로운 이야기네요. 조금 더 들려주실 수 있을까요?');
+    trialHistory.push({role:'assistant',content:'흥미로운 이야기네요. 조금 더 들려주실 수 있을까요?'});
   });
-  msgs2.appendChild(wrap);
-  msgs2.scrollTop=msgs2.scrollHeight;
-}
-
-function onTrialAnswer(value,label,question){
-  trialAnswers.push({q:question,a:value,label:label});
-  addMsg('user',label);
-  setTimeout(function(){showTrialQuestion(trialStep+1)},600);
 }
 
 function endTrial(){
   if(!trialMode&&trialDone)return;
   trialMode=false;trialDone=true;
   if(trialTimerId){clearInterval(trialTimerId);trialTimerId=null}
-  /* Update timer display to 0:00 */
+  /* Lock input */
+  var inputArea=document.getElementById('cbInputArea');
+  if(inputArea)inputArea.classList.add('locked');
+  var ta2=document.getElementById('cbTa');
+  if(ta2){ta2.disabled=true;ta2.placeholder='체험이 종료되었습니다'}
+  /* Update timer display */
   var fillEl=document.getElementById('trialFill');
   if(fillEl)fillEl.style.width='0%';
   var timeEl=document.getElementById('trialTime');
   if(timeEl)timeEl.textContent='완료';
-  /* Extract tags from answers */
-  var tags=[];
-  trialAnswers.forEach(function(ans){
-    var tag=TRIAL_TAG_MAP[ans.a];
-    if(tag&&tags.indexOf(tag)===-1)tags.push(tag);
-  });
-  if(tags.length>5)tags=tags.slice(0,5);
   /* Build result card */
   var msgs2=document.getElementById('cbMsgs');
   var card=document.createElement('div');card.className='trial-result';
-  var tagsHtml=tags.map(function(t){return '<span class="tr-tag">'+t+'</span>'}).join('');
-  card.innerHTML='<div class="tr-header"><h3>탐색 완료</h3><p>짧은 대화에서 발견한 당신의 단서</p></div>'
-    +'<div class="tr-tags">'+tagsHtml+'</div>'
-    +'<div class="tr-summary">"'+generateTrialSummary(tags)+'"</div>'
+  card.innerHTML='<div class="tr-header"><h3>탐색 완료</h3><p>짧은 대화에서 당신의 단서를 발견했습니다</p></div>'
     +'<div class="tr-teaser"><p>심층 분석에서는 이런 것들을 더 발견할 수 있습니다:</p>'
-    +'<ul><li>숨겨진 가치관 & 회피 패턴</li><li>잠재 동기 분석</li><li>본질 리포트 생성</li></ul></div>'
+    +'<ul><li>대화 속 숨겨진 가치관 & 회피 패턴</li><li>잠재 동기와 핵심 욕구 분석</li><li>나만의 본질 리포트 생성</li></ul></div>'
     +'<div class="tr-cta"><button class="tr-btn-login" id="trBtnLogin">로그인하고 계속하기 →</button>'
     +'<button class="tr-btn-pricing" id="trBtnPricing">구독 플랜 보기</button></div>';
   msgs2.appendChild(card);
   msgs2.scrollTop=msgs2.scrollHeight;
-  /* Bind CTA buttons */
   document.getElementById('trBtnLogin').addEventListener('click',function(){openModal('loginOverlay')});
   document.getElementById('trBtnPricing').addEventListener('click',function(){openModal('pricingOverlay')});
-}
-
-function generateTrialSummary(tags){
-  if(tags.length===0)return '아직 더 많은 대화가 필요합니다.';
-  var summaries={
-    '성장지향':'끊임없이 더 나은 자신을 추구하는',
-    '안정추구':'단단한 기반 위에서 성장하려는',
-    '자율지향':'자유와 자기결정을 중시하는',
-    '영향력추구':'세상에 의미 있는 변화를 만들고 싶은',
-    '몰입형':'깊은 집중 속에서 자신을 발견하는',
-    '결과지향':'구체적인 성취로 자신을 증명하는',
-    '공유형':'나눔 속에서 의미를 찾는',
-    '탐험가':'새로운 경험을 통해 성장하는',
-    '완벽주의':'디테일과 퀄리티에 진심인',
-    '독립지향':'자기만의 길을 개척하려는',
-    '이상주의':'꿈과 현실 사이에서 균형을 찾는',
-    '현재지향':'지금 이 순간의 즐거움을 아는',
-    '창작본능':'만드는 행위 자체에서 에너지를 얻는',
-    '탐험본능':'미지의 세계에 끌리는',
-    '관계중심':'사람과의 연결에서 힘을 얻는'
-  };
-  var parts=[];
-  tags.forEach(function(tag){if(summaries[tag])parts.push(summaries[tag])});
-  if(parts.length>=2)return parts[0]+', '+parts[1]+' 사람입니다.';
-  if(parts.length===1)return parts[0]+' 사람입니다.';
-  return tags.join(', ')+' — 당신만의 독특한 조합이 보입니다.';
 }
 
 /* CHATBOX – v4 expand pattern */
@@ -2684,7 +2547,8 @@ function extractMetaFromConversation(){
 
 /* SEND MESSAGE */
 function sendMsg(t){
-  if(trialMode||trialDone)return;
+  if(trialMode){sendTrialMsg(t);return}
+  if(trialDone)return;
   var hasText=t&&t.trim();
   var hasFile=!!pendingFile;
   if(!hasText&&!hasFile)return;

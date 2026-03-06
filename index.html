@@ -1855,19 +1855,35 @@ document.querySelectorAll('.lang-opt').forEach(function(o){o.classList.toggle('a
 if(currentLang!=='ko')applyLang();
 function mockSignIn(){
   authUser=MOCK;updateAuthUI();closeModal('loginOverlay');
-  /* Reset trial state on login */
+  /* Transfer trial conversation on login */
   if(trialDone||trialMode){
-    trialMode=false;trialDone=false;trialTurnCount=0;trialHistory=[];
-    localStorage.removeItem('aletheia-trial-done');
+    var hadTrialHistory=trialHistory.length>0;
     if(trialTimerId){clearInterval(trialTimerId);trialTimerId=null}
     var prog=document.getElementById('trialProgress');if(prog)prog.style.display='none';
-    var inputArea=document.getElementById('cbInputArea');if(inputArea){inputArea.style.display='';inputArea.classList.add('locked')}
-    var ta2=document.getElementById('cbTa');if(ta2){ta2.disabled=true;ta2.placeholder='위에서 모드를 선택해주세요'}
-    /* Restore onboarding */
-    var wel=document.getElementById('cbWelcome');if(wel){wel.style.display='';wel.innerHTML=obCache.innerHTML}
-    onboardingDone=false;chatStarted=false;
-    document.getElementById('cbMsgs').innerHTML='';
-    bindOnboarding();
+    localStorage.removeItem('aletheia-trial-done');
+    if(hadTrialHistory){
+      /* Keep chat messages visible, transfer history to conversationHistory */
+      conversationHistory=trialHistory.slice();
+      /* Remove trial result card if present */
+      var trCard=document.querySelector('.trial-result');if(trCard)trCard.remove();
+      /* Unlock input for full chat */
+      var inputArea=document.getElementById('cbInputArea');
+      if(inputArea){inputArea.style.display='';inputArea.classList.remove('locked')}
+      var ta2=document.getElementById('cbTa');
+      if(ta2){ta2.disabled=false;ta2.placeholder='대화를 이어가세요...'}
+      /* Skip onboarding — already have context */
+      onboardingDone=true;chatStarted=true;
+      var wel=document.getElementById('cbWelcome');if(wel)wel.style.display='none';
+    }else{
+      /* No trial history — restore normal onboarding */
+      var inputArea=document.getElementById('cbInputArea');if(inputArea){inputArea.style.display='';inputArea.classList.add('locked')}
+      var ta2=document.getElementById('cbTa');if(ta2){ta2.disabled=true;ta2.placeholder='위에서 모드를 선택해주세요'}
+      var wel=document.getElementById('cbWelcome');if(wel){wel.style.display='';wel.innerHTML=obCache.innerHTML}
+      onboardingDone=false;chatStarted=false;
+      document.getElementById('cbMsgs').innerHTML='';
+      bindOnboarding();
+    }
+    trialMode=false;trialDone=false;trialTurnCount=0;trialHistory=[];
   }
   switchPage(pendingPage||'unmask');pendingPage=null;
 }

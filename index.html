@@ -1851,7 +1851,8 @@ function mockSignIn(){
   authUser=MOCK;updateAuthUI();closeModal('loginOverlay');
   /* Reset trial state on login */
   if(trialDone||trialMode){
-    trialMode=false;trialDone=false;trialStep=0;trialAnswers=[];
+    trialMode=false;trialDone=false;trialTurnCount=0;trialHistory=[];
+    localStorage.removeItem('aletheia-trial-done');
     if(trialTimerId){clearInterval(trialTimerId);trialTimerId=null}
     var prog=document.getElementById('trialProgress');if(prog)prog.style.display='none';
     var inputArea=document.getElementById('cbInputArea');if(inputArea){inputArea.style.display='';inputArea.classList.add('locked')}
@@ -2022,7 +2023,7 @@ document.getElementById('interpretInput').addEventListener('keydown',function(e)
 
 
 /* ===== TRIAL SURVEY MODE ===== */
-var trialMode=false,trialDone=false,trialTurnCount=0,trialHistory=[],trialTimerStart=0,trialTimerId=null;
+var trialMode=false,trialDone=!!localStorage.getItem('aletheia-trial-done'),trialTurnCount=0,trialHistory=[],trialTimerStart=0,trialTimerId=null;
 var TRIAL_DURATION=5*60*1000;
 var TRIAL_MAX_TURNS=5;
 
@@ -2102,6 +2103,7 @@ function sendTrialMsg(text){
 function endTrial(){
   if(!trialMode&&trialDone)return;
   trialMode=false;trialDone=true;
+  localStorage.setItem('aletheia-trial-done','1');
   if(trialTimerId){clearInterval(trialTimerId);trialTimerId=null}
   /* Lock input */
   var inputArea=document.getElementById('cbInputArea');
@@ -2136,8 +2138,8 @@ function expandChat(){
     return;
   }
   if(!authUser&&trialDone){
-    /* Already did trial — show result again */
-    box.classList.add('expanded');
+    /* Already did trial — prompt login */
+    pendingPage='unmask';openModal('loginOverlay');
     return;
   }
   if(!authUser){

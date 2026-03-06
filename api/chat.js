@@ -11,7 +11,8 @@ const PROMPTS = {
   business_proposal: require('./_prompts/business-proposal'),
   brand_guide: require('./_prompts/brand-guide'),
   cafe_proposal: require('./_prompts/cafe-proposal'),
-  founder_analysis: require('./_prompts/founder-analysis')
+  founder_analysis: require('./_prompts/founder-analysis'),
+  trial_survey: require('./_prompts/trial-survey')
 };
 
 const supabaseUrl = process.env.SUPABASE_URL;

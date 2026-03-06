@@ -3684,26 +3684,26 @@ window._alScene={scene:scene,pts:pts,c1:cg.children[0],c2:cg.children[1],createP
 
     if(wasMorphed&&needsMorph){
       /* 모핑 상태 → 모핑 상태 (unmask↔interpret)
-         morphLevel을 0까지 내리면 homeForce가 중심으로 끌어당김.
-         대신 0.2까지만 낮춰서 파티클이 느슨해진 상태에서
-         텍스쳐를 교체 → 새 타겟으로 서서히 재구성.
-         전체 5초, dip 지점 40% (2초) */
+         핵심: morphLevel을 높게 유지해야 homeForce(중심 끌림)가 작동 안 함.
+         0.65까지만 살짝 내려서 파티클이 약간 느슨해진 뒤
+         텍스쳐 교체 → 파티클이 현 위치에서 새 타겟으로 자연스럽게 흘러감.
+         전체 5초, dip 지점 30% (1.5초) */
       var startML=this.morphLevel;
-      var dipTo=0.18;
+      var dipTo=0.65;
       var totalDur=5000;
-      var dipPoint=0.40;
+      var dipPoint=0.30;
       var dStart=performance.now();
       var swapped=false;
       (function transition(){
         if(self._targetMode!==mode)return;
         var t=Math.min((performance.now()-dStart)/totalDur,1);
         if(t<dipPoint){
-          /* Phase 1: startML → dipTo (느슨하게 풀기) */
+          /* Phase 1: startML → 0.65 (살짝 풀기, 숨 내쉬기) */
           var p=t/dipPoint;
-          var e=p<0.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+          var e=p*p*(3-2*p);
           self.morphLevel=startML-(startML-dipTo)*e;
         }else{
-          /* Phase 2: dipTo → 1.0 (새 형태로 구성) */
+          /* Phase 2: 텍스쳐 교체 후 0.65 → 1.0 (새 형태로 안착) */
           if(!swapped){
             swapped=true;
             simMat.uniforms.uSilTargets.value=targetTex;
